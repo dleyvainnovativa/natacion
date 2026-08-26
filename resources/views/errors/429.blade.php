@@ -1,0 +1,5 @@
+@extends('errors.layout')
+@section('code', '429')
+@section('icon', 'fa-hourglass-half')
+@section('heading', 'Demasiadas solicitudes')
+@section('message', 'Estás haciendo peticiones muy rápido. Espera unos segundos e inténtalo de nuevo.')

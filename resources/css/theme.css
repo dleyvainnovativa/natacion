@@ -1,0 +1,303 @@
+/*
+ * Swim Fitness — tema global
+ * Marca: #49a5b2 (teal) · #84c77a (verde) · #6378af (índigo)
+ * Tokens aquí; Bootstrap se encarga de grid/spacing/utilidades.
+ * Toggle claro/oscuro vía [data-theme] en <html>.
+ */
+
+:root {
+    /* Marca */
+    --brand-teal:   #49a5b2;
+    --brand-green:  #84c77a;
+    --brand-indigo: #6378af;
+
+    /* Derivados (hover/estados) */
+    --brand-teal-600:   #3d8b96;
+    --brand-teal-050:   #e9f4f6;
+    --brand-indigo-600: #52689a;
+
+    /* Superficies — claro */
+    --bg:          #f6f8fa;
+    --surface:     #ffffff;
+    --surface-2:   #f0f3f6;
+    --border:      #e2e8ee;
+    --text:        #1c2430;   /* contraste AA sobre --surface */
+    --text-muted:  #5c6875;
+
+    /* Semánticos */
+    --radius:      8px;
+    --shadow-sm:   0 1px 2px rgba(28, 36, 48, .06);
+    --shadow:      0 2px 8px rgba(28, 36, 48, .08);
+    --font-ui:     'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono:   'JetBrains Mono', ui-monospace, monospace;
+}
+
+[data-theme="dark"] {
+    --bg:          #0f151c;
+    --surface:     #171f29;
+    --surface-2:   #1e2833;
+    --border:      #2a3744;
+    --text:        #e7edf3;
+    --text-muted:  #9aa8b6;
+    --brand-teal-050: #12252a;
+    --shadow-sm:   0 1px 2px rgba(0, 0, 0, .3);
+    --shadow:      0 2px 8px rgba(0, 0, 0, .35);
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+}
+
+code, kbd, .mono { font-family: var(--font-mono); }
+
+/* --- Componentes reutilizables --- */
+
+.app-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-brand {
+    background: var(--brand-teal);
+    border-color: var(--brand-teal);
+    color: #fff;
+}
+.btn-brand:hover { background: var(--brand-teal-600); border-color: var(--brand-teal-600); color: #fff; }
+
+.badge-role {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    padding: .2rem .5rem;
+    border-radius: 6px;
+    background: var(--brand-teal-050);
+    color: var(--brand-teal-600);
+}
+
+/* Chips de programa por color (blue/teal/green del catálogo) */
+.chip-blue  { background: #e7eefc; color: var(--brand-indigo-600); }
+.chip-teal  { background: var(--brand-teal-050); color: var(--brand-teal-600); }
+.chip-green { background: #eaf6e6; color: #4f9f43; }
+
+/* --- Layout: topbar + sidebar + offcanvas (UI overhaul) --- */
+
+/* --- Estructura: topbar fija + (sidebar desktop | offcanvas móvil) --- */
+
+:root { --topbar-h: 56px; --sidebar-w: 240px; }
+
+.app-topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--topbar-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: 0 1rem;
+    z-index: 1030;
+}
+
+.app-topbar-brand {
+    display: flex; align-items: center; gap: .5rem;
+    font-weight: 700; color: var(--text); text-decoration: none;
+}
+
+.app-topbar-spacer { flex: 1; }
+
+/* Bloque de perfil/tema/logout en la topbar */
+.app-topbar-user {
+    display: flex; align-items: center; gap: .5rem;
+}
+.app-topbar-user .user-name { font-size: .88rem; }
+
+.app-shell {
+    display: flex;
+    padding-top: var(--topbar-h);   /* deja espacio bajo la topbar fija */
+    min-height: 100vh;
+}
+
+.app-sidebar {
+    width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 1rem;
+    flex-shrink: 0;
+    position: sticky;
+    top: var(--topbar-h);
+    align-self: flex-start;
+    height: calc(100vh - var(--topbar-h));
+    overflow-y: auto;
+}
+
+.app-main { flex: 1; padding: 1.5rem; min-width: 0; }
+
+.app-nav-link {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .55rem .7rem;
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: .92rem;
+}
+.app-nav-link:hover { background: var(--surface-2); color: var(--text); }
+.app-nav-link.active { background: var(--brand-teal-050); color: var(--brand-teal-600); font-weight: 600; }
+/* Ancho fijo de icono para que el texto alinee */
+.app-nav-link i { width: 18px; text-align: center; }
+
+/* Botón hamburguesa: solo móvil */
+.app-hamburger { display: none; background: none; border: 0; color: var(--text); font-size: 1.2rem; }
+
+/* Offcanvas usa el mismo surface/tokens */
+.offcanvas.app-offcanvas {
+    background: var(--surface);
+    color: var(--text);
+    width: var(--sidebar-w) !important;
+}
+.app-offcanvas .offcanvas-header { border-bottom: 1px solid var(--border); }
+
+:focus-visible { outline: 2px solid var(--brand-teal); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+}
+
+/* --- Breakpoint: bajo 992px, sidebar -> oculto, hamburguesa visible --- */
+@media (max-width: 991.98px) {
+    .app-sidebar { display: none; }
+    .app-hamburger { display: inline-flex; align-items: center; }
+    .app-topbar-user .user-name,
+    .app-topbar-user .user-role { display: none; } /* solo iconos en móvil */
+}
+
+/* ==================================================================
+ * PAGINACIÓN (Bootstrap 5) con tokens de marca
+ * ================================================================== */
+.pagination { --bs-pagination-color: var(--text-muted);
+    --bs-pagination-bg: var(--surface);
+    --bs-pagination-border-color: var(--border);
+    --bs-pagination-hover-color: var(--brand-teal-600);
+    --bs-pagination-hover-bg: var(--surface-2);
+    --bs-pagination-hover-border-color: var(--border);
+    --bs-pagination-focus-color: var(--brand-teal-600);
+    --bs-pagination-focus-bg: var(--surface-2);
+    --bs-pagination-active-bg: var(--brand-teal);
+    --bs-pagination-active-border-color: var(--brand-teal);
+    --bs-pagination-disabled-bg: var(--surface);
+    --bs-pagination-disabled-border-color: var(--border);
+    flex-wrap: wrap;
+}
+
+/* ==================================================================
+ * DRAG & DROP del horario (solo desktop)
+ * ================================================================== */
+.session-card[draggable="true"] { cursor: grab; }
+.session-card.dragging { opacity: .45; }
+.schedule-col.drop-target { outline: 2px dashed var(--brand-teal); outline-offset: -4px; background: var(--brand-teal-050); }
+
+@media (max-width: 991.98px) {
+    /* En móvil no hay drag: las tarjetas se mueven por tap-modal */
+    .session-card[draggable="true"] { cursor: pointer; }
+}
+
+/* ==================================================================
+ * LOGIN — panel dividido
+ * ================================================================== */
+.login-split { display: flex; min-height: 100vh; }
+
+.login-brand {
+    flex: 1 1 45%;
+    background: linear-gradient(140deg, var(--brand-teal) 0%, var(--brand-indigo) 100%);
+    color: #fff;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 3rem;
+    position: relative;
+    overflow: hidden;
+}
+.login-brand h1 { font-weight: 700; font-size: 2rem; }
+.login-brand .tagline { opacity: .9; font-size: 1.05rem; max-width: 30ch; }
+.login-brand .brand-mark { font-size: 3rem; margin-bottom: 1rem; }
+/* Ondas decorativas sutiles */
+.login-brand::after {
+    content: ""; position: absolute; right: -80px; bottom: -80px;
+    width: 300px; height: 300px; border-radius: 50%;
+    background: rgba(255,255,255,.08);
+}
+
+.login-form-side {
+    flex: 1 1 55%;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem; background: var(--bg);
+}
+.login-form-card { width: 100%; max-width: 380px; }
+
+@media (max-width: 767.98px) {
+    .login-brand { display: none; }   /* móvil: solo formulario centrado */
+}
+
+
+/* ==================================================================
+ * TIER 2 — Horario. Pegar al final de resources/css/theme.css
+ * ================================================================== */
+
+.schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: .75rem;
+    align-items: start;
+}
+
+.schedule-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.schedule-col-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: .6rem .75rem;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+}
+
+.schedule-col-body {
+    padding: .5rem;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    min-height: 120px;
+}
+
+.session-card {
+    border-radius: var(--radius);
+    padding: .55rem .65rem;
+    border: 1px solid transparent;
+    line-height: 1.35;
+    transition: transform .08s ease, box-shadow .08s ease;
+}
+
+.session-card[role="button"] { cursor: pointer; }
+.session-card[role="button"]:hover {
+    box-shadow: var(--shadow);
+    transform: translateY(-1px);
+}
+
+.session-card.is-cancelled { opacity: .5; }
+.session-card.is-cancelled .fw-600 { text-decoration: line-through; }
+
+/* Roster: fila resaltable al pasar el mouse */
+.roster-item:hover { background: var(--surface-2); }
+.roster-item { cursor: pointer; }
+
+@media (max-width: 900px) {
+    .schedule-grid { grid-template-columns: 1fr; }
+}

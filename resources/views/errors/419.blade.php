@@ -1,0 +1,5 @@
+@extends('errors.layout')
+@section('code', '419')
+@section('icon', 'fa-clock-rotate-left')
+@section('heading', 'Sesión expirada')
+@section('message', 'Tu sesión caducó por seguridad. Vuelve a cargar la página e inténtalo de nuevo.')

@@ -1,0 +1,5 @@
+@extends('errors.layout')
+@section('code', '403')
+@section('icon', 'fa-lock')
+@section('heading', 'Acceso denegado')
+@section('message', 'No tienes permiso para ver esta sección con tu rol actual. Si crees que es un error, contacta a la administración.')

@@ -1,0 +1,5 @@
+@extends('errors.layout')
+@section('code', '503')
+@section('icon', 'fa-screwdriver-wrench')
+@section('heading', 'En mantenimiento')
+@section('message', 'El sistema está temporalmente fuera de servicio por mantenimiento. Volvemos en breve.')
