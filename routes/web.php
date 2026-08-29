@@ -11,6 +11,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\SlotController;
+use App\Http\Controllers\SessionMemberController;
 use Illuminate\Support\Facades\Route;
 
 // --- Invitado ---
@@ -46,6 +47,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/horario/sesiones/{session}/mover', [SessionController::class, 'move'])->name('schedule.sessions.move');
         Route::post('/horario/sesiones/{session}/cancelar', [SessionController::class, 'cancel'])->name('schedule.sessions.cancel');
         Route::post('/horario/sesiones/{session}/conflictos', [SessionController::class, 'checkConflicts'])->name('schedule.sessions.conflicts');
+
+        Route::post('/horario/sesiones/{from}/socio', [SessionMemberController::class, 'move'])
+            ->name('schedule.sessions.move-member');
     });
 
     // =====================================================================

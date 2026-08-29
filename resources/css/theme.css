@@ -301,3 +301,128 @@ code, kbd, .mono { font-family: var(--font-mono); }
 @media (max-width: 900px) {
     .schedule-grid { grid-template-columns: 1fr; }
 }
+
+/* ==================================================================
+ * BUNDLE B — Pulido visual + rejilla de horario.
+ * Pegar al final de resources/css/theme.css.
+ * ================================================================== */
+
+/* --- Encabezado de página (patrón consistente y con más carácter) --- */
+.page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border);
+}
+.page-eyebrow {
+    display: inline-flex; align-items: center; gap: .4rem;
+    font-size: .72rem; font-weight: 600; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--brand-teal-600);
+    margin-bottom: .35rem;
+}
+.page-title {
+    font-size: 1.6rem; font-weight: 700; line-height: 1.1;
+    margin: 0 0 .25rem; color: var(--text);
+    letter-spacing: -.02em;
+}
+.page-sub { color: var(--text-muted); font-size: .92rem; margin: 0; }
+
+/* Acento sutil: barra a la izquierda del título */
+.page-eyebrow::before {
+    content: ""; width: 20px; height: 2px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--brand-teal), var(--brand-green));
+    display: inline-block;
+}
+
+/* --- Tarjetas: un poco más de profundidad y ritmo --- */
+.app-card { box-shadow: var(--shadow-sm); transition: box-shadow .15s ease; }
+
+/* --- Tablas: más aire, hover, encabezado más limpio --- */
+.table > :not(caption) > * > * { padding: .75rem .9rem; }
+.table thead th {
+    font-size: .74rem; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--text-muted); font-weight: 600;
+    border-bottom: 1px solid var(--border);
+}
+.table tbody tr { transition: background .1s ease; }
+
+/* --- Barra de filtros --- */
+.filter-bar {
+    display: flex; gap: .75rem; align-items: end; flex-wrap: wrap;
+    padding: .85rem 1rem;
+}
+.filter-field { display: flex; flex-direction: column; gap: .25rem; min-width: 150px; }
+.filter-field label {
+    font-size: .72rem; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--text-muted);
+}
+
+/* ==================================================================
+ * REJILLA HORAS × DÍAS
+ * ================================================================== */
+.time-grid {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 720px;
+}
+.time-grid thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--surface-2);
+    padding: .6rem .5rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+}
+.time-grid .tg-day { font-weight: 600; font-size: .9rem; color: var(--text); }
+.time-grid .tg-date { font-size: .72rem; color: var(--text-muted); }
+
+.tg-time-col {
+    width: 64px; text-align: center; vertical-align: middle;
+    font-size: .82rem; color: var(--text-muted);
+    background: var(--surface-2);
+    position: sticky; left: 0; z-index: 1;
+    border-right: 1px solid var(--border);
+}
+
+.tg-cell {
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: .4rem;
+    vertical-align: top;
+    min-width: 130px;
+    height: 1px; /* permite que el contenido defina alto */
+}
+.time-grid tbody tr:last-child .tg-cell { border-bottom: 0; }
+
+/* La tarjeta dentro de la rejilla */
+.time-grid .session-card { margin-bottom: .4rem; }
+.time-grid .session-card:last-child { margin-bottom: 0; }
+
+/* Meta dentro de la tarjeta */
+.session-card .sc-meta {
+    display: flex; flex-direction: column; gap: .1rem;
+    font-size: .76rem; color: var(--text-muted); margin-top: .25rem;
+}
+.session-card .sc-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: .35rem; font-size: .76rem;
+}
+.session-card .sc-actions { display: inline-flex; gap: .25rem; opacity: 0; transition: opacity .1s ease; }
+.session-card:hover .sc-actions { opacity: 1; }
+.sc-btn {
+    background: rgba(255,255,255,.5); border: 1px solid var(--border);
+    border-radius: 5px; width: 24px; height: 22px; line-height: 1;
+    font-size: .7rem; color: var(--text-muted); cursor: pointer;
+}
+.sc-btn:hover { color: var(--brand-teal-600); border-color: var(--brand-teal); }
+[data-theme="dark"] .sc-btn { background: rgba(0,0,0,.2); }
+
+/* En móvil los botones siempre visibles (no hay hover) */
+@media (max-width: 991.98px) {
+    .session-card .sc-actions { opacity: 1; }
+    .time-grid { min-width: 640px; }
+}

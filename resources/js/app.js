@@ -301,4 +301,85 @@ function initScheduleDnD() {
 
 document.addEventListener('DOMContentLoaded', initScheduleDnD);
 
+
+/* ==================================================================
+ * BUNDLE B — Mover socio individual + fix del filtro de roster.
+ * Pegar al final de resources/js/app.js.
+ * ================================================================== */
+
+let mmSourceSessionId = null;
+
+/** Abre el modal "mover socio" con los socios de la clase origen. */
+function openMoveMember(sessionId) {
+    mmSourceSessionId = sessionId;
+    const sessions = window.SF_SESSIONS || [];
+    const source = sessions.find((s) => s.id === sessionId);
+
+    const memberSel = document.getElementById('mm-member');
+    const targetSel = document.getElementById('mm-target');
+    document.getElementById('mm-warnings').innerHTML = '';
+
+    // Socios de la clase origen.
+    memberSel.innerHTML = '';
+    if (!source || !source.members.length) {
+        memberSel.innerHTML = '<option value="">(esta clase no tiene socios)</option>';
+    } else {
+        source.members.forEach((m) => {
+            memberSel.insertAdjacentHTML('beforeend',
+                `<option value="${m.id}">${m.name}</option>`);
+        });
+    }
+
+    // Clases destino (todas menos la origen).
+    targetSel.innerHTML = '';
+    sessions.filter((s) => s.id !== sessionId).forEach((s) => {
+        targetSel.insertAdjacentHTML('beforeend',
+            `<option value="${s.id}">${s.label}</option>`);
+    });
+
+    document.getElementById('mm-scope-date').checked = true;
+    SF.modal.show('moveMemberModal');
+}
+
+async function submitMoveMember() {
+    const memberId = document.getElementById('mm-member').value;
+    const toSession = document.getElementById('mm-target').value;
+    const scope = document.querySelector('input[name="mm-scope"]:checked')?.value || 'date';
+
+    if (!memberId || !toSession) {
+        SF.toast('Elige socio y clase destino.', 'error');
+        return;
+    }
+
+    try {
+        const res = await SF.http.post(`/horario/sesiones/${mmSourceSessionId}/socio`, {
+            member_id: memberId,
+            to_session: toSession,
+            scope,
+        });
+        SF.toast(res.message || 'Socio movido.');
+        setTimeout(() => location.reload(), 700);
+    } catch (e) {
+        SF.toast(e.data?.message || 'No se pudo mover al socio.', 'error');
+    }
+}
+
+/**
+ * Filtro de roster — versión robusta e independiente de SF.
+ * Se llama con oninput. Compara contra data-text (o el texto visible).
+ */
+function filterRoster(input) {
+    const term = (input.value || '').trim().toLowerCase();
+    const list = input.closest('form')?.querySelector('#roster-list')
+              || document.getElementById('roster-list');
+    if (!list) return;
+    list.querySelectorAll('.roster-item').forEach((el) => {
+        const text = (el.getAttribute('data-text') || el.textContent || '').toLowerCase();
+        el.style.display = text.includes(term) ? '' : 'none';
+    });
+}
+
+Object.assign(window.SF, { openMoveMember, submitMoveMember, filterRoster });
+
+
 Object.assign(window.SF, { initScheduleDnD });

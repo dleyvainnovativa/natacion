@@ -22,7 +22,7 @@
 
         <div class="mb-3">
             <input type="text" class="form-control" placeholder="Filtrar socios…"
-                   onkeyup="SF.filterList(this, '#roster-list .roster-item')">
+                   oninput="SF.filterRoster(this)">
         </div>
 
         @php $assigned = $slot->members->pluck('id')->flip(); @endphp

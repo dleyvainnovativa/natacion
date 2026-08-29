@@ -9,7 +9,7 @@ class ScheduleSlot extends Model
 {
     protected $fillable = [
         'program_id', 'instructor_id', 'lane_id',
-        'weekday', 'start_time', 'duration_min', 'active',
+        'weekday', 'start_time', 'duration_min', 'active', 'source',
     ];
 
     protected $casts = ['active' => 'boolean'];
