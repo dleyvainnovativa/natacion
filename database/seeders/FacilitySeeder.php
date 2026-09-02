@@ -8,9 +8,9 @@ use App\Models\Pool;
 use Illuminate\Database\Seeder;
 
 /**
- * Instalación base para poder agendar: una alberca con carriles e instructores
- * de ejemplo. Ajustar a la realidad del club (número real de carriles, nombres
- * reales de instructores) desde la BD o un panel futuro.
+ * Instalación base. La alberca tiene 3 carriles (cualquier programa puede usar
+ * cualquier carril). Ajustado de 6 -> 3 para que la vista de día muestre solo
+ * columnas reales.
  */
 class FacilitySeeder extends Seeder
 {
@@ -18,16 +18,17 @@ class FacilitySeeder extends Seeder
     {
         $pool = Pool::firstOrCreate(['name' => 'Alberca principal']);
 
-        // 6 carriles de ejemplo.
-        for ($i = 1; $i <= 6; $i++) {
+        for ($i = 1; $i <= 3; $i++) {
             Lane::firstOrCreate(
                 ['pool_id' => $pool->id, 'label' => "Carril {$i}"],
                 ['position' => $i]
             );
         }
 
-        // Instructores vistos en el horario de referencia (ejemplo).
-        foreach (['Carlos', 'Ana', 'Luis', 'Susana', 'Rafael'] as $name) {
+        // Si ya existían carriles 4-6 de una siembra anterior, quitarlos.
+        Lane::where('pool_id', $pool->id)->where('position', '>', 3)->delete();
+
+        foreach (['Carlos', 'Belem', 'Jesus', 'C. Eduardo', 'Ivan'] as $name) {
             Instructor::firstOrCreate(
                 ['name' => $name],
                 ['pay_per_class' => 150.00, 'active' => true]

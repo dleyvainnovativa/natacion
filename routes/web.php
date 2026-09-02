@@ -12,6 +12,7 @@ use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\SlotController;
 use App\Http\Controllers\SessionMemberController;
+
 use Illuminate\Support\Facades\Route;
 
 // --- Invitado ---
@@ -32,6 +33,10 @@ Route::middleware('auth')->group(function () {
     // =====================================================================
     // Ver horario: todos los roles autenticados (una sola definición).
     Route::get('/horario', [ScheduleController::class, 'index'])->name('schedule.index');
+
+
+    Route::get('/horario/dia', [ScheduleController::class, 'day'])->name('schedule.day');
+
 
     // Edición del horario: recepción, coordinación, admin.
     Route::middleware('role:admin,coordinator,receptionist')->group(function () {

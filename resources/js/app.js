@@ -379,6 +379,209 @@ function filterRoster(input) {
     });
 }
 
+/* ==================================================================
+ * DÍA — motor de arrastre del lienzo (estilo Google Calendar).
+ * Pegar al final de resources/js/app.js.
+ *
+ * Usa arrastre por puntero (no HTML5 DnD) para posicionar libre. Al soltar,
+ * calcula carril + hora (snap 10 min) y confirma con el endpoint de mover que
+ * ya existe (schedule.sessions.move), scope 'date'. La duración no cambia.
+ * ================================================================== */
+
+const DC_SNAP_MIN = 10;
+
+function initDayCanvas() {
+    // Ambas vistas comparten el mismo motor de arrastre. La diferencia: en la
+    // vista de día la fecha es única; en la semanal cada carril lleva su propia
+    // fecha (data-date en .dc-lane-body). Por eso la fecha se lee del carril
+    // destino al soltar, no del lienzo.
+    const canvas = document.querySelector('.day-canvas, .week-canvas');
+    if (!canvas) return;
+
+    const pxPerMin = parseFloat(getComputedStyle(canvas).getPropertyValue('--px-per-min')) || 1.2;
+    const startMin = parseInt(canvas.dataset.startMin, 10);
+    const endMin   = parseInt(canvas.dataset.endMin, 10);
+
+    const events = canvas.querySelectorAll('.dc-event[data-session-id]');
+    const laneBodies = canvas.querySelectorAll('.dc-lane-body');
+
+    events.forEach((ev) => makeDraggable(ev, { canvas, pxPerMin, startMin, endMin, laneBodies }));
+}
+
+function makeDraggable(ev, ctx) {
+    let dragging = false;
+    let ghost = null;          // clon que sigue el puntero
+    let placeholder = null;    // bloque fantasma "snapped" dentro del carril destino
+    let badge = null;          // etiqueta flotante con la hora destino
+    let offsetY = 0;           // desfase puntero→borde superior del evento
+    let hDrag = 0;             // altura del evento (fija por duración)
+
+    // Estado del destino calculado en el último pointermove.
+    let target = { lane: null, laneId: null, snapMin: null, date: null };
+
+    ev.addEventListener('pointerdown', (e) => {
+        // Solo botón principal; ignora clicks en botones internos si los hubiera.
+        if (e.button !== 0) return;
+        e.preventDefault();
+        dragging = true;
+        ev.setPointerCapture(e.pointerId);
+
+        const rect = ev.getBoundingClientRect();
+        offsetY = e.clientY - rect.top;
+        hDrag = rect.height;
+
+        // Ghost: clon translúcido que sigue el puntero.
+        ghost = ev.cloneNode(true);
+        ghost.classList.add('dc-ghost');
+        ghost.style.height = hDrag + 'px';
+        ev.classList.add('dc-dragging-origin');
+        document.body.appendChild(ghost);
+
+        // Placeholder: bloque "snapped" que se posiciona en el carril destino.
+        placeholder = document.createElement('div');
+        placeholder.className = 'dc-placeholder';
+        placeholder.style.height = hDrag + 'px';
+
+        // Badge flotante con la hora destino (estilo Google Calendar).
+        badge = document.createElement('div');
+        badge.className = 'dc-time-badge';
+        document.body.appendChild(badge);
+
+        update(e.clientX, e.clientY);
+    });
+
+    ev.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        update(e.clientX, e.clientY);
+    });
+
+    ev.addEventListener('pointerup', async (e) => {
+        if (!dragging) return;
+        dragging = false;
+
+        const hadTarget = target.lane && target.snapMin !== null && target.date;
+        const laneId = target.laneId;
+        const snapMin = target.snapMin;
+        const date = target.date;
+        cleanup();
+
+        if (!hadTarget) return; // soltó fuera de un carril
+
+        const hh = String(Math.floor(snapMin / 60)).padStart(2, '0');
+        const mm = String(snapMin % 60).padStart(2, '0');
+        const startsAt = `${date}T${hh}:${mm}`;
+
+        await commitMove(ev.dataset.sessionId, startsAt, laneId);
+    });
+
+    ev.addEventListener('pointercancel', () => { if (dragging) { dragging = false; cleanup(); } });
+
+    /* Recalcula carril + hora snapped y actualiza ghost, placeholder y badge. */
+    function update(x, y) {
+        // Ghost sigue el puntero.
+        ghost.style.left = (x - ghost.offsetWidth / 2) + 'px';
+        ghost.style.top  = (y - offsetY) + 'px';
+
+        // ¿Sobre qué carril está el borde SUPERIOR del bloque arrastrado?
+        const topY = y - offsetY;
+        const lane = laneUnder(x, topY + 1, ctx.laneBodies) || laneUnder(x, y, ctx.laneBodies);
+
+        ctx.laneBodies.forEach((lb) => lb.classList.remove('dc-lane-hot'));
+
+        if (!lane) {
+            target = { lane: null, laneId: null, snapMin: null, date: null };
+            if (placeholder.parentNode) placeholder.remove();
+            badge.style.display = 'none';
+            return;
+        }
+
+        lane.classList.add('dc-lane-hot');
+
+        // Minuto crudo por la posición del borde superior dentro del carril.
+        const rect = lane.getBoundingClientRect();
+        const relY = topY - rect.top;
+        let rawMin = ctx.startMin + (relY / ctx.pxPerMin);
+        let snapped = Math.round(rawMin / DC_SNAP_MIN) * DC_SNAP_MIN;
+
+        // No dejar que el bloque se salga del lienzo por arriba/abajo.
+        const durMin = hDrag / ctx.pxPerMin;
+        snapped = Math.max(ctx.startMin, Math.min(snapped, ctx.endMin - durMin));
+
+        target = {
+            lane,
+            laneId: lane.dataset.laneId || null,
+            snapMin: snapped,
+            date: lane.dataset.date || null,
+        };
+
+        // Colocar el placeholder dentro del carril, en la posición snapped.
+        const topPx = (snapped - ctx.startMin) * ctx.pxPerMin;
+        placeholder.style.top = topPx + 'px';
+        if (placeholder.parentNode !== lane) lane.appendChild(placeholder);
+
+        // Badge con la hora destino, junto al placeholder. Si el destino cae en
+        // otro día (vista semanal), anteponemos el día abreviado.
+        const hh = String(Math.floor(snapped / 60)).padStart(2, '0');
+        const mm = String(snapped % 60).padStart(2, '0');
+        const originDate = (ev.dataset.starts || '').slice(0, 10);
+        let label = `${hh}:${mm}`;
+        if (target.date && target.date !== originDate) {
+            label = `${dowLabel(target.date)} ${hh}:${mm}`;
+        }
+        badge.textContent = label;
+        badge.style.display = 'block';
+        badge.style.left = (rect.left + 6) + 'px';
+        badge.style.top  = (rect.top + topPx - 10) + 'px';
+    }
+
+    function cleanup() {
+        if (ghost) { ghost.remove(); ghost = null; }
+        if (placeholder && placeholder.parentNode) placeholder.remove();
+        placeholder = null;
+        if (badge) { badge.remove(); badge = null; }
+        ev.classList.remove('dc-dragging-origin');
+        ctx.laneBodies.forEach((lb) => lb.classList.remove('dc-lane-hot'));
+    }
+}
+
+/** Etiqueta de día abreviada (es) a partir de 'YYYY-MM-DD'. */
+function dowLabel(isoDate) {
+    const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const d = new Date(isoDate + 'T00:00:00');
+    return dias[d.getDay()] || '';
+}
+
+/** ¿Qué cuerpo de carril está bajo estas coordenadas? */
+function laneUnder(x, y, laneBodies) {
+    for (const lb of laneBodies) {
+        const r = lb.getBoundingClientRect();
+        if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return lb;
+    }
+    return null;
+}
+
+/** Confirma el movimiento con el endpoint existente (scope date). */
+async function commitMove(sessionId, startsAt, laneId) {
+    try {
+        const res = await SF.http.post(`/horario/sesiones/${sessionId}/mover`, {
+            scope: 'date',
+            starts_at: startsAt,
+            lane_id: laneId,
+        });
+        if (res.warnings && res.warnings.length) {
+            res.warnings.forEach((w) => SF.toast(w, 'error'));
+        }
+        SF.toast(res.message || 'Clase movida.');
+        setTimeout(() => location.reload(), 650);
+    } catch (e) {
+        SF.toast(e.data?.message || 'No se pudo mover la clase.', 'error');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initDayCanvas);
+Object.assign(window.SF, { initDayCanvas });
+
+
 Object.assign(window.SF, { openMoveMember, submitMoveMember, filterRoster });
 
 

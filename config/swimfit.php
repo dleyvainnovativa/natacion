@@ -17,6 +17,17 @@ return [
     ],
     'inscripcion' => 600.00,
 
+    /*
+    | Ventana de jornada para la vista de día (lienzo tipo Google Calendar).
+    | El lienzo muestra SIEMPRE este rango completo. Si una clase cae fuera,
+    | el controlador expande automáticamente al borde de hora (fallback).
+    | En minutos desde medianoche: 7*60 = 420 (07:00), 21*60 = 1260 (21:00).
+    */
+    'horario' => [
+        'inicio_min' => 7 * 60,   // 07:00
+        'fin_min'    => 21 * 60,  // 21:00
+    ],
+
     'programas' => [
         'swim-baby' => [
             'slug' => 'swim-baby', 'nombre' => 'Swim Baby', 'audiencia' => 'kids',
