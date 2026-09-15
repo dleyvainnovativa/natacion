@@ -61,40 +61,84 @@ class SessionGenerator
                     ->get();
 
                 foreach ($slots as $slot) {
-                    [$h, $m] = array_pad(explode(':', (string) $slot->start_time), 2, 0);
-                    $startsAt = $day->copy()->setTime((int) $h, (int) $m, 0);
-
-                    $exists = ClassSession::where('schedule_slot_id', $slot->id)
-                        ->where('starts_at', $startsAt)
-                        ->exists();
-
-                    if ($exists) {
-                        $skipped++;
-                        continue;
-                    }
-
-                    $session = ClassSession::create([
-                        'schedule_slot_id'        => $slot->id,
-                        'program_id'              => $slot->program_id,
-                        'lane_id'                 => $slot->lane_id,
-                        'scheduled_instructor_id' => $slot->instructor_id,
-                        'actual_instructor_id'    => $slot->instructor_id,
-                        'starts_at'               => $startsAt,
-                        'duration_min'            => $slot->duration_min,
-                        'status'                  => 'scheduled',
-                        'is_modified'             => false,
-                    ]);
-
-                    $memberIds = $slot->members->pluck('id')->all();
-                    if ($memberIds) {
-                        $session->members()->sync($memberIds);
-                    }
-
-                    $created++;
+                    [$created, $skipped] = $this->materialize($slot, $day, $created, $skipped);
                 }
             }
         });
 
         return compact('created', 'skipped');
+    }
+
+    /**
+     * Genera las sesiones de UN slot desde $from hasta $to (inclusive), solo en
+     * su día de la semana. Idempotente. Se usa al crear/editar un slot para que
+     * la clase aparezca de inmediato en la semana actual y las siguientes del
+     * mes, sin regenerar el resto.
+     *
+     * @return array{created:int, skipped:int}
+     */
+    public function generateForSlot(ScheduleSlot $slot, Carbon $from, Carbon $to): array
+    {
+        if (! $slot->active) {
+            return ['created' => 0, 'skipped' => 0];
+        }
+
+        $created = 0;
+        $skipped = 0;
+
+        $slot->loadMissing('members:id');
+
+        DB::transaction(function () use ($slot, $from, $to, &$created, &$skipped) {
+            $day = $from->copy()->startOfDay();
+            $end = $to->copy()->endOfDay();
+
+            while ($day->lte($end)) {
+                if ($day->isoWeekday() === (int) $slot->weekday) {
+                    [$created, $skipped] = $this->materialize($slot, $day, $created, $skipped);
+                }
+                $day->addDay();
+            }
+        });
+
+        return compact('created', 'skipped');
+    }
+
+    /**
+     * Crea la sesión de $slot en la fecha $day si no existe ya. Devuelve los
+     * contadores actualizados. NO abre transacción (la abre quien llama).
+     *
+     * @return array{0:int,1:int} [created, skipped]
+     */
+    private function materialize(ScheduleSlot $slot, Carbon $day, int $created, int $skipped): array
+    {
+        [$h, $m] = array_pad(explode(':', (string) $slot->start_time), 2, 0);
+        $startsAt = $day->copy()->setTime((int) $h, (int) $m, 0);
+
+        $exists = ClassSession::where('schedule_slot_id', $slot->id)
+            ->where('starts_at', $startsAt)
+            ->exists();
+
+        if ($exists) {
+            return [$created, $skipped + 1];
+        }
+
+        $session = ClassSession::create([
+            'schedule_slot_id'        => $slot->id,
+            'program_id'              => $slot->program_id,
+            'lane_id'                 => $slot->lane_id,
+            'scheduled_instructor_id' => $slot->instructor_id,
+            'actual_instructor_id'    => $slot->instructor_id,
+            'starts_at'               => $startsAt,
+            'duration_min'            => $slot->duration_min,
+            'status'                  => 'scheduled',
+            'is_modified'             => false,
+        ]);
+
+        $memberIds = $slot->members->pluck('id')->all();
+        if ($memberIds) {
+            $session->members()->sync($memberIds);
+        }
+
+        return [$created + 1, $skipped];
     }
 }

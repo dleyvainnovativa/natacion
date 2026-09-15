@@ -195,10 +195,11 @@ class ScheduleController extends Controller
 
     private function ensureWeekGenerated(Carbon $ref, SessionGenerator $generator): void
     {
-        $has = ClassSession::forWeek($ref)->exists();
-        // Con plantillas por mes, generar en cuanto exista ALGÚN slot en el
-        // sistema: resolveFor() clonará/creará la plantilla del mes que falte.
-        if (! $has && ScheduleSlot::where('active', true)->exists()) {
+        // generateWeek es idempotente (dedup por slot+fecha y respeta
+        // is_modified), así que lo ejecutamos siempre que haya slots activos.
+        // Antes se saltaba si la semana ya tenía ALGUNA sesión, lo que impedía
+        // que un slot agregado después apareciera en una semana ya poblada.
+        if (ScheduleSlot::where('active', true)->exists()) {
             $generator->generateWeek($ref);
         }
     }
@@ -227,7 +228,7 @@ class ScheduleController extends Controller
         // El lienzo SIEMPRE muestra este rango completo (p. ej. 07:00–21:00),
         // sin importar a qué hora caiga la primera/última clase. Así una clase a
         // las 09:20 no colapsa la vista a 08:00–11:00.
-        $dayStart = (int) config('swimfit.horario.inicio_min', 6 * 60);
+        $dayStart = (int) config('swimfit.horario.inicio_min', 7 * 60);
         $dayEnd   = (int) config('swimfit.horario.fin_min', 21 * 60);
 
         if ($sessions->isEmpty()) {
