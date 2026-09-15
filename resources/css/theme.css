@@ -490,12 +490,15 @@ code, kbd, .mono { font-family: var(--font-mono); }
 
 .dc-lane-body { position: relative; background: var(--surface); }
 .dc-lane-body.dc-lane-hot { background: var(--brand-teal-050); }
+.dc-lane-body.dc-lane-hot::after { z-index: 0; }
 
 /* Líneas de hora de fondo */
 .dc-grid-line {
     position: absolute; left: 0; right: 0;
     border-top: 1px solid var(--border);
     opacity: .6;
+    z-index: 1;              /* por encima del fondo del carril… */
+    pointer-events: none;
 }
 
 /* Evento (clase) posicionado por top/height */
@@ -512,6 +515,7 @@ code, kbd, .mono { font-family: var(--font-mono); }
     line-height: 1.2;
     user-select: none;
     touch-action: none; /* necesario para pointer drag en touch */
+    z-index: 2;         /* por encima de las líneas de hora (.dc-grid-line) */
 }
 .dc-event:hover { box-shadow: var(--shadow); }
 .dc-event-time { font-size: .72rem; font-weight: 600; opacity: .8; }
@@ -647,4 +651,68 @@ code, kbd, .mono { font-family: var(--font-mono); }
 @media (max-width: 767.98px) {
     .wc-lane { flex-basis: 96px; width: 96px; }
     .week-canvas { max-height: calc(100vh - 200px); }
+}
+
+/* ==================================================================
+ * HOJA DE ACCIONES (bottom sheet) para clicks en clases del lienzo.
+ * ================================================================== */
+.sheet-overlay {
+    position: fixed; inset: 0; z-index: 1200;
+    background: rgba(28, 36, 48, .38);
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; transition: opacity .18s ease;
+}
+.sheet-overlay.is-open { opacity: 1; }
+
+.action-sheet {
+    width: 100%; max-width: 460px;
+    background: var(--surface);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -6px 24px rgba(28, 36, 48, .18);
+    padding: .5rem .5rem calc(.5rem + env(safe-area-inset-bottom, 0));
+    transform: translateY(12px);
+    transition: transform .18s ease;
+}
+.sheet-overlay.is-open .action-sheet { transform: translateY(0); }
+
+.action-sheet-head {
+    padding: .6rem .8rem .4rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: .35rem;
+}
+.action-sheet-title { font-weight: 700; }
+.action-sheet-sub   { font-size: .8rem; color: var(--text-muted); }
+
+.action-sheet-item {
+    display: flex; align-items: center; gap: .7rem;
+    width: 100%; text-align: left;
+    background: transparent; border: 0;
+    padding: .8rem .85rem; border-radius: 10px;
+    font-size: .92rem; color: var(--text);
+    cursor: pointer;
+}
+.action-sheet-item i { width: 20px; text-align: center; color: var(--brand-teal); }
+.action-sheet-item:hover { background: var(--surface-2); }
+.action-sheet-item.is-danger { color: #c0392b; }
+.action-sheet-item.is-danger i { color: #c0392b; }
+.action-sheet-item.is-disabled { color: var(--text-muted); cursor: default; }
+.action-sheet-item.is-disabled i { color: var(--text-muted); }
+
+.action-sheet-cancel {
+    width: 100%; margin-top: .35rem;
+    background: var(--surface-2); border: 0;
+    padding: .75rem; border-radius: 10px;
+    font-weight: 600; color: var(--text); cursor: pointer;
+}
+.action-sheet-cancel:hover { background: var(--border); }
+
+/* Tarjeta de slot en la plantilla: clicable → hoja de acciones */
+.slot-card { cursor: pointer; transition: box-shadow .12s ease, transform .12s ease; }
+.slot-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.slot-card:focus-visible { outline: 2px solid var(--brand-teal); outline-offset: 2px; }
+
+/* En pantallas anchas se centra como tarjeta, no pegada abajo. */
+@media (min-width: 768px) {
+    .sheet-overlay { align-items: center; }
+    .action-sheet { border-radius: 14px; }
 }

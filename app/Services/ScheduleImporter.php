@@ -8,6 +8,8 @@ use App\Models\Member;
 use App\Models\Pool;
 use App\Models\Program;
 use App\Models\ScheduleSlot;
+use App\Models\ScheduleTemplate;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -46,10 +48,15 @@ class ScheduleImporter
     ];
 
     /**
-     * @return array{classes:int, slots:int, roster_links:int, skipped:int, warnings:array<string>}
+     * @param  string       $path      Ruta al archivo HORARIO .xlsx
+     * @param  Carbon|null  $monthRef  Mes destino; default: mes actual
+     * @return array{classes:int, slots:int, roster_links:int, skipped:int, warnings:array<string>, template:string}
      */
-    public function import(string $path): array
+    public function import(string $path, ?Carbon $monthRef = null): array
     {
+        $monthRef ??= Carbon::now();
+        $template = ScheduleTemplate::resolveFor($monthRef->copy()->startOfMonth());
+
         $sheet = IOFactory::load($path)->getActiveSheet();
         $rows = $sheet->toArray(null, true, false, false); // 0-based arrays
 
@@ -59,11 +66,13 @@ class ScheduleImporter
         $membersBySocio = Member::pluck('id', 'socio_number')->all();
         $lanes = Lane::orderBy('position')->get();
 
-        $result = ['classes' => 0, 'slots' => 0, 'roster_links' => 0, 'skipped' => 0, 'warnings' => []];
+        $result = ['classes' => 0, 'slots' => 0, 'roster_links' => 0, 'skipped' => 0, 'warnings' => [], 'template' => $template->display_label];
 
-        DB::transaction(function () use ($rows, $indexRows, $programsBySlug, $membersBySocio, $lanes, &$result) {
-            // Idempotencia: quitar slots importados antes.
-            ScheduleSlot::where('source', 'horario')->delete();
+        DB::transaction(function () use ($rows, $indexRows, $programsBySlug, $membersBySocio, $lanes, $template, &$result) {
+            // Idempotencia: quitar slots importados antes SOLO de esta plantilla.
+            ScheduleSlot::where('source', 'horario')
+                ->where('schedule_template_id', $template->id)
+                ->delete();
 
             $instructorCache = [];
 
@@ -102,7 +111,7 @@ class ScheduleImporter
                 // Un slot por día del patrón; el roster va a todos.
                 $laneId = $lanes->first()?->id;
                 foreach ($weekdays as $wd) {
-                    $slot = ScheduleSlot::create([
+                    $slot = $template->slots()->create([
                         'program_id'    => $programId,
                         'instructor_id' => $instructorId,
                         'lane_id'       => $laneId,

@@ -24,15 +24,20 @@ return [
     | En minutos desde medianoche: 7*60 = 420 (07:00), 21*60 = 1260 (21:00).
     */
     'horario' => [
-        'inicio_min' => 7 * 60,   // 07:00
+        'inicio_min' => 6 * 60,   // 07:00
         'fin_min'    => 21 * 60,  // 21:00
     ],
 
     'programas' => [
         'swim-baby' => [
-            'slug' => 'swim-baby', 'nombre' => 'Swim Baby', 'audiencia' => 'kids',
-            'edad' => '4 meses a 4 años', 'icono' => 'fa-baby', 'color' => 'blue',
-            'duracion_min' => 30, 'cupo_carril' => 6,
+            'slug' => 'swim-baby',
+            'nombre' => 'Swim Baby',
+            'audiencia' => 'kids',
+            'edad' => '4 meses a 4 años',
+            'icono' => 'fa-baby',
+            'color' => 'blue',
+            'duracion_min' => 30,
+            'cupo_carril' => 6,
             'resumen' => 'Mamá o papá entra al agua con el pequeño. Estimulación y vínculo familiar.',
             'precios' => [
                 ['concepto' => '2 días a la semana', 'dias' => 2, 'monto' => 770.00],
@@ -40,9 +45,14 @@ return [
             ],
         ],
         'swim-junior' => [
-            'slug' => 'swim-junior', 'nombre' => 'Swim Junior', 'audiencia' => 'kids',
-            'edad' => '4 a 14 años', 'icono' => 'fa-child-reaching', 'color' => 'green',
-            'duracion_min' => 45, 'cupo_carril' => 7,
+            'slug' => 'swim-junior',
+            'nombre' => 'Swim Junior',
+            'audiencia' => 'kids',
+            'edad' => '4 a 14 años',
+            'icono' => 'fa-child-reaching',
+            'color' => 'green',
+            'duracion_min' => 45,
+            'cupo_carril' => 7,
             'resumen' => 'Niños aprenden a nadar en grupos de 5 a 6 por maestro.',
             'precios_grupos' => [
                 ['titulo' => 'Niveles 1 y 2 (30 min)', 'precios' => [
@@ -60,9 +70,14 @@ return [
             ],
         ],
         'swim-adultos' => [
-            'slug' => 'swim-adultos', 'nombre' => 'Swim Adolescentes y Adultos', 'audiencia' => 'adults',
-            'edad' => '15 años en adelante', 'icono' => 'fa-person-swimming', 'color' => 'teal',
-            'duracion_min' => 50, 'cupo_carril' => 2,
+            'slug' => 'swim-adultos',
+            'nombre' => 'Swim Adolescentes y Adultos',
+            'audiencia' => 'adults',
+            'edad' => '15 años en adelante',
+            'icono' => 'fa-person-swimming',
+            'color' => 'teal',
+            'duracion_min' => 50,
+            'cupo_carril' => 2,
             'resumen' => 'Enseñanza y acondicionamiento. Cada alumno trabaja individualmente.',
             'precios' => [
                 ['concepto' => '2 días a la semana', 'dias' => 2, 'monto' => 870.00],
@@ -70,9 +85,14 @@ return [
             ],
         ],
         'fitness-swim' => [
-            'slug' => 'fitness-swim', 'nombre' => 'Fitness Swim', 'audiencia' => 'adults',
-            'edad' => '15 años en adelante', 'icono' => 'fa-dumbbell', 'color' => 'green',
-            'duracion_min' => 50, 'cupo_carril' => 2,
+            'slug' => 'fitness-swim',
+            'nombre' => 'Fitness Swim',
+            'audiencia' => 'adults',
+            'edad' => '15 años en adelante',
+            'icono' => 'fa-dumbbell',
+            'color' => 'green',
+            'duracion_min' => 50,
+            'cupo_carril' => 2,
             'resumen' => 'Zumba, cardio y kick boxing. No es necesario saber nadar.',
             'precios' => [
                 ['concepto' => '2 días a la semana', 'dias' => 2, 'monto' => 870.00],

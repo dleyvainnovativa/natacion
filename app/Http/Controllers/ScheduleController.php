@@ -30,7 +30,13 @@ class ScheduleController extends Controller
         $sessions = $this->filteredSessions($request)
             ->forWeek($reference)
             ->where('status', '!=', 'cancelled')
-            ->with(['program', 'lane', 'actualInstructor', 'scheduledInstructor', 'members:id'])
+            ->with([
+                'program',
+                'lane',
+                'actualInstructor',
+                'scheduledInstructor',
+                'members:id,first_name,last_name_1'
+            ])
             ->orderBy('starts_at')
             ->get();
 
@@ -40,7 +46,7 @@ class ScheduleController extends Controller
 
         // Carriles a mostrar: si hay filtro de carril, solo ese; si no, todos.
         $lanes = Lane::orderBy('position')
-            ->when($request->filled('lane'), fn ($q) => $q->where('id', $request->integer('lane')))
+            ->when($request->filled('lane'), fn($q) => $q->where('id', $request->integer('lane')))
             ->get();
 
         // byDay[iso][laneId] = [sesiones]. laneId 0 = sin carril.
@@ -51,7 +57,7 @@ class ScheduleController extends Controller
 
         // ¿Hay alguna clase sin carril en la semana? (para decidir si mostramos
         // la columna "sin carril").
-        $hasUnassigned = $sessions->contains(fn ($s) => $s->lane_id === null);
+        $hasUnassigned = $sessions->contains(fn($s) => $s->lane_id === null);
 
         return view('schedule.index', [
             'weekStart'     => $weekStart,
@@ -68,6 +74,7 @@ class ScheduleController extends Controller
             'programs'      => Program::where('active', true)->orderBy('name')->get(),
             'allLanes'      => Lane::orderBy('position')->get(), // para el filtro
             'filters'       => $request->only(['instructor', 'program', 'lane']),
+            'sessionsPayload' => $this->sessionsPayload($sessions),
         ]);
     }
 
@@ -88,7 +95,13 @@ class ScheduleController extends Controller
         $sessions = $this->filteredSessions($request)
             ->whereDate('starts_at', $date->toDateString())
             ->where('status', '!=', 'cancelled')
-            ->with(['program', 'lane', 'actualInstructor', 'scheduledInstructor', 'members:id'])
+            ->with([
+                'program',
+                'lane',
+                'actualInstructor',
+                'scheduledInstructor',
+                'members:id,first_name,last_name_1'
+            ])
             ->orderBy('starts_at')
             ->get();
 
@@ -113,19 +126,33 @@ class ScheduleController extends Controller
             'instructors' => Instructor::where('active', true)->orderBy('name')->get(),
             'programs'    => Program::where('active', true)->orderBy('name')->get(),
             'filters'     => $request->only(['instructor', 'program']),
+            'sessionsPayload' => $this->sessionsPayload($sessions),
         ]);
     }
 
-    public function template()
+    public function template(Request $request)
     {
         $this->authorize('move-classes');
 
+        // Mes seleccionado (YYYY-MM); por defecto el mes actual.
+        $monthRef = $this->parseMonth($request->query('month'));
+
+        // Resuelve (crea/clona) la plantilla del mes elegido.
+        $template = \App\Models\ScheduleTemplate::resolveFor($monthRef);
+
         $slots = ScheduleSlot::with(['program', 'lane', 'instructor', 'members:id'])
+            ->where('schedule_template_id', $template->id)
             ->where('active', true)
             ->orderBy('weekday')->orderBy('start_time')
             ->get()->groupBy('weekday');
 
+        // Lista de meses existentes para el selector (más reciente primero).
+        $months = \App\Models\ScheduleTemplate::orderByDesc('year')->orderByDesc('month')->get();
+
         return view('schedule.template', [
+            'template'    => $template,
+            'month'       => $template->key_month,   // 'YYYY-MM'
+            'months'      => $months,
             'slots'       => $slots,
             'weekdays'    => $this->weekdayLabels(),
             'programs'    => Program::where('active', true)->orderBy('name')->get(),
@@ -134,11 +161,43 @@ class ScheduleController extends Controller
         ]);
     }
 
+    /** Convierte 'YYYY-MM' a un Carbon en el día 1 de ese mes; default: hoy. */
+    private function parseMonth(?string $month): Carbon
+    {
+        if ($month && preg_match('/^\d{4}-\d{2}$/', $month)) {
+            return Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
+        }
+        return Carbon::now()->startOfMonth();
+    }
+
+    /**
+     * Payload para el modal "mover socio": lista de clases con sus socios, para
+     * poblar los selects sin otra petición. IDs como string para casar con los
+     * data-session-id del DOM.
+     */
+    private function sessionsPayload($sessions): array
+    {
+        return $sessions->map(function ($s) {
+            $label = $s->starts_at->format('D H:i') . ' · ' . ($s->program?->name ?? 'Clase')
+                . ' · ' . ($s->lane?->label ?? 'Sin carril');
+            return [
+                'id'      => (string) $s->id,
+                'label'   => $label,
+                'members' => $s->members->map(fn($m) => [
+                    'id'   => (string) $m->id,
+                    'name' => trim(($m->first_name ?? '') . ' ' . ($m->last_name_1 ?? '')) ?: ('Socio #' . $m->id),
+                ])->values()->all(),
+            ];
+        })->values()->all();
+    }
+
     // --- helpers ---
 
     private function ensureWeekGenerated(Carbon $ref, SessionGenerator $generator): void
     {
         $has = ClassSession::forWeek($ref)->exists();
+        // Con plantillas por mes, generar en cuanto exista ALGÚN slot en el
+        // sistema: resolveFor() clonará/creará la plantilla del mes que falte.
         if (! $has && ScheduleSlot::where('active', true)->exists()) {
             $generator->generateWeek($ref);
         }
@@ -147,14 +206,14 @@ class ScheduleController extends Controller
     private function filteredSessions(Request $request)
     {
         return ClassSession::query()
-            ->when($request->filled('instructor'), fn ($q) =>
-                $q->where(fn ($w) => $w
-                    ->where('actual_instructor_id', $request->integer('instructor'))
-                    ->orWhere('scheduled_instructor_id', $request->integer('instructor'))))
-            ->when($request->filled('program'), fn ($q) =>
-                $q->where('program_id', $request->integer('program')))
-            ->when($request->filled('lane'), fn ($q) =>
-                $q->where('lane_id', $request->integer('lane')));
+            ->when($request->filled('instructor'), fn($q) =>
+            $q->where(fn($w) => $w
+                ->where('actual_instructor_id', $request->integer('instructor'))
+                ->orWhere('scheduled_instructor_id', $request->integer('instructor'))))
+            ->when($request->filled('program'), fn($q) =>
+            $q->where('program_id', $request->integer('program')))
+            ->when($request->filled('lane'), fn($q) =>
+            $q->where('lane_id', $request->integer('lane')));
     }
 
     /**
@@ -168,7 +227,7 @@ class ScheduleController extends Controller
         // El lienzo SIEMPRE muestra este rango completo (p. ej. 07:00–21:00),
         // sin importar a qué hora caiga la primera/última clase. Así una clase a
         // las 09:20 no colapsa la vista a 08:00–11:00.
-        $dayStart = (int) config('swimfit.horario.inicio_min', 7 * 60);
+        $dayStart = (int) config('swimfit.horario.inicio_min', 6 * 60);
         $dayEnd   = (int) config('swimfit.horario.fin_min', 21 * 60);
 
         if ($sessions->isEmpty()) {
@@ -178,9 +237,9 @@ class ScheduleController extends Controller
         // Fallback: si alguna clase queda FUERA de la ventana fija, expandimos al
         // borde de hora para que nunca se recorte. Nunca encogemos por debajo de
         // la ventana de jornada.
-        $starts = $sessions->map(fn ($s) => $s->starts_at->hour * 60 + $s->starts_at->minute);
-        $ends = $sessions->map(fn ($s) =>
-            $s->starts_at->hour * 60 + $s->starts_at->minute + $s->duration_min);
+        $starts = $sessions->map(fn($s) => $s->starts_at->hour * 60 + $s->starts_at->minute);
+        $ends = $sessions->map(fn($s) =>
+        $s->starts_at->hour * 60 + $s->starts_at->minute + $s->duration_min);
 
         $min = min($dayStart, ((int) floor($starts->min() / 60)) * 60);
         $max = max($dayEnd, ((int) ceil($ends->max() / 60)) * 60);
@@ -193,7 +252,14 @@ class ScheduleController extends Controller
 
     private function weekdayLabels(): array
     {
-        return [1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves', 5 => 'Viernes',
-                6 => 'Sábado', 7 => 'Domingo'];
+        return [
+            1 => 'Lunes',
+            2 => 'Martes',
+            3 => 'Miércoles',
+            4 => 'Jueves',
+            5 => 'Viernes',
+            6 => 'Sábado',
+            7 => 'Domingo'
+        ];
     }
 }

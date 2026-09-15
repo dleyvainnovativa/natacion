@@ -30,6 +30,23 @@
                 <a href="{{ route('schedule.day', array_merge($filters, ['date' => $nextDay])) }}"
                    class="btn btn-outline-secondary"><i class="fa-solid fa-chevron-right"></i></a>
             </div>
+            {{-- Selector de fecha: ir a cualquier día --}}
+            <form method="GET" class="d-flex align-items-center gap-1" id="dayDateForm">
+                @foreach ($filters as $fk => $fv)
+                    <input type="hidden" name="{{ $fk }}" value="{{ $fv }}">
+                @endforeach
+                <input type="date" name="date" value="{{ $date->toDateString() }}"
+                       class="form-control form-control-sm" style="width:auto"
+                       onchange="document.getElementById('dayDateForm').submit()"
+                       title="Ir a una fecha">
+            </form>
+            {{-- Editar la plantilla del mes de este día --}}
+            @can('move-classes')
+                <a href="{{ route('schedule.template', ['month' => $date->format('Y-m')]) }}"
+                   class="btn btn-brand btn-sm">
+                    <i class="fa-solid fa-table-cells me-1"></i> Editar plantilla
+                </a>
+            @endcan
         </div>
     </div>
 
@@ -108,7 +125,6 @@
                             @endphp
                             <div class="dc-event chip-{{ $color }}"
                                  style="top: {{ $top }}px; height: {{ $h }}px"
-                                 draggable="true"
                                  data-session-id="{{ $s->id }}"
                                  data-duration="{{ $s->duration_min }}"
                                  data-starts="{{ $s->starts_at->format('Y-m-d\TH:i') }}"
@@ -143,7 +159,6 @@
                             @endphp
                             <div class="dc-event chip-teal"
                                  style="top: {{ $top }}px; height: {{ $h }}px"
-                                 draggable="true"
                                  data-session-id="{{ $s->id }}"
                                  data-duration="{{ $s->duration_min }}"
                                  data-starts="{{ $s->starts_at->format('Y-m-d\TH:i') }}"
@@ -166,5 +181,7 @@
 
     @can('move-classes')
         <div id="dc-toast-anchor"></div>
+        @include('schedule.partials.move-modal')
+        @include('schedule.partials.move-member-modal')
     @endcan
 @endsection

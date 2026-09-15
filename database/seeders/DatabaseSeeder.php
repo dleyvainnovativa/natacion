@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             MembershipTypeSeeder::class, // T0: 31 tipos de socio
             UserSeeder::class,           // T0: 1 usuario por rol
             FacilitySeeder::class,       // T2: alberca, carriles, instructores
+            // ClassScheduleSeeder::class,  // Demo: clases por programa + roster de socios
         ]);
     }
 }

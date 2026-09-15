@@ -6,6 +6,7 @@ use App\Http\Requests\SlotRequest;
 use App\Models\Member;
 use App\Models\Program;
 use App\Models\ScheduleSlot;
+use App\Models\ScheduleTemplate;
 use App\Services\ConflictDetector;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -16,35 +17,51 @@ class SlotController extends Controller
     {
         $data = $request->validated();
 
+        // Resolver la plantilla del mes indicado (o el actual) y colgar el slot.
+        $monthRef = $this->monthRef($data['month'] ?? null);
+        $template = ScheduleTemplate::resolveFor($monthRef);
+        unset($data['month']);
+
         // Duración por defecto = la del programa (el usuario puede sobreescribir).
         $data['duration_min'] ??= Program::find($data['program_id'])?->duration_min ?? 30;
 
-        $slot = ScheduleSlot::create($data + ['active' => true]);
+        $slot = $template->slots()->create($data + ['active' => true]);
 
-        return redirect()->route('schedule.template')
-            ->with('ok', 'Clase agregada a la plantilla.')
+        return redirect()->route('schedule.template', ['month' => $template->key_month])
+            ->with('ok', 'Clase agregada a la plantilla de ' . $template->display_label . '.')
             ->with('warnings', $this->slotWarnings($slot, $detector));
     }
 
     public function update(SlotRequest $request, ScheduleSlot $slot, ConflictDetector $detector)
     {
         $data = $request->validated();
+        unset($data['month']);
         $data['duration_min'] ??= Program::find($data['program_id'])?->duration_min ?? $slot->duration_min;
 
         $slot->update($data);
 
-        return redirect()->route('schedule.template')
+        return redirect()->route('schedule.template', ['month' => $slot->template?->key_month])
             ->with('ok', 'Clase actualizada.')
             ->with('warnings', $this->slotWarnings($slot, $detector));
     }
 
     public function destroy(ScheduleSlot $slot)
     {
+        $month = $slot->template?->key_month;
         // Baja lógica del slot: deja de generar sesiones, conserva el histórico.
         $slot->update(['active' => false]);
 
-        return redirect()->route('schedule.template')
+        return redirect()->route('schedule.template', ['month' => $month])
             ->with('ok', 'Clase quitada de la plantilla.');
+    }
+
+    /** 'YYYY-MM' -> Carbon (día 1); default: hoy. */
+    private function monthRef(?string $month): Carbon
+    {
+        if ($month && preg_match('/^\d{4}-\d{2}$/', $month)) {
+            return Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
+        }
+        return Carbon::now()->startOfMonth();
     }
 
     /** Gestionar el roster recurrente del slot. */
@@ -71,7 +88,7 @@ class SlotController extends Controller
 
         $slot->members()->sync($validated['member_ids'] ?? []);
 
-        return redirect()->route('schedule.template')
+        return redirect()->route('schedule.template', ['month' => $slot->template?->key_month])
             ->with('ok', 'Roster actualizado. Las próximas sesiones lo heredarán.');
     }
 

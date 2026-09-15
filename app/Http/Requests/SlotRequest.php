@@ -14,6 +14,7 @@ class SlotRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'month'         => ['nullable', 'regex:/^\d{4}-\d{2}$/'],
             'program_id'    => ['required', 'exists:programs,id'],
             'instructor_id' => ['nullable', 'exists:instructors,id'],
             'lane_id'       => ['nullable', 'exists:lanes,id'],

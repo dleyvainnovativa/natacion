@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ClassSession;
 use App\Models\ScheduleSlot;
+use App\Models\ScheduleTemplate;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +27,11 @@ class SessionGenerator
     /**
      * Genera las sesiones de la semana que contiene $reference.
      *
+     * La semana puede cruzar dos meses (p. ej. 31 ago – 6 sep). Por eso el mes
+     * se decide POR DÍA: para cada día de la semana se resuelve la plantilla de
+     * su mes (creándola/clonando si no existe) y se materializan sus slots de
+     * ese día de la semana.
+     *
      * @return array{created:int, skipped:int}
      */
     public function generateWeek(Carbon $reference): array
@@ -33,41 +39,59 @@ class SessionGenerator
         $created = 0;
         $skipped = 0;
 
-        $slots = ScheduleSlot::with('members:id')->where('active', true)->get();
+        $weekStart = $reference->copy()->startOfWeek(Carbon::MONDAY);
 
-        DB::transaction(function () use ($slots, $reference, &$created, &$skipped) {
-            foreach ($slots as $slot) {
-                $startsAt = $slot->startsAtForWeek($reference);
+        DB::transaction(function () use ($weekStart, &$created, &$skipped) {
+            // Cache de plantillas por "YYYY-MM" para no resolver dos veces.
+            $templateCache = [];
 
-                // ¿Ya existe una sesión para este slot en esta fecha/hora?
-                $exists = ClassSession::where('schedule_slot_id', $slot->id)
-                    ->where('starts_at', $startsAt)
-                    ->exists();
+            for ($i = 0; $i < 7; $i++) {
+                $day = $weekStart->copy()->addDays($i);
+                $iso = $day->isoWeekday();                 // 1..7
+                $key = $day->format('Y-m');
 
-                if ($exists) {
-                    $skipped++;
-                    continue;
+                $template = $templateCache[$key]
+                    ??= ScheduleTemplate::resolveFor($day);
+
+                // Slots activos de ESTA plantilla para ESTE día de la semana.
+                $slots = ScheduleSlot::with('members:id')
+                    ->where('schedule_template_id', $template->id)
+                    ->where('active', true)
+                    ->where('weekday', $iso)
+                    ->get();
+
+                foreach ($slots as $slot) {
+                    [$h, $m] = array_pad(explode(':', (string) $slot->start_time), 2, 0);
+                    $startsAt = $day->copy()->setTime((int) $h, (int) $m, 0);
+
+                    $exists = ClassSession::where('schedule_slot_id', $slot->id)
+                        ->where('starts_at', $startsAt)
+                        ->exists();
+
+                    if ($exists) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $session = ClassSession::create([
+                        'schedule_slot_id'        => $slot->id,
+                        'program_id'              => $slot->program_id,
+                        'lane_id'                 => $slot->lane_id,
+                        'scheduled_instructor_id' => $slot->instructor_id,
+                        'actual_instructor_id'    => $slot->instructor_id,
+                        'starts_at'               => $startsAt,
+                        'duration_min'            => $slot->duration_min,
+                        'status'                  => 'scheduled',
+                        'is_modified'             => false,
+                    ]);
+
+                    $memberIds = $slot->members->pluck('id')->all();
+                    if ($memberIds) {
+                        $session->members()->sync($memberIds);
+                    }
+
+                    $created++;
                 }
-
-                $session = ClassSession::create([
-                    'schedule_slot_id'        => $slot->id,
-                    'program_id'              => $slot->program_id,
-                    'lane_id'                 => $slot->lane_id,
-                    'scheduled_instructor_id' => $slot->instructor_id,
-                    'actual_instructor_id'    => $slot->instructor_id,
-                    'starts_at'               => $startsAt,
-                    'duration_min'            => $slot->duration_min,
-                    'status'                  => 'scheduled',
-                    'is_modified'             => false,
-                ]);
-
-                // Heredar roster del slot -> session_members.
-                $memberIds = $slot->members->pluck('id')->all();
-                if ($memberIds) {
-                    $session->members()->sync($memberIds);
-                }
-
-                $created++;
             }
         });
 

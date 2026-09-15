@@ -409,56 +409,62 @@ function initDayCanvas() {
 }
 
 function makeDraggable(ev, ctx) {
-    let dragging = false;
+    const DRAG_THRESHOLD = 5; // px de movimiento para considerar arrastre
+
+    let armed = false;         // pointer abajo, aún sin decidir click vs drag
+    let dragging = false;      // ya superó el umbral → es arrastre
     let ghost = null;          // clon que sigue el puntero
     let placeholder = null;    // bloque fantasma "snapped" dentro del carril destino
     let badge = null;          // etiqueta flotante con la hora destino
     let offsetY = 0;           // desfase puntero→borde superior del evento
     let hDrag = 0;             // altura del evento (fija por duración)
+    let downX = 0, downY = 0;  // punto donde bajó el puntero
 
     // Estado del destino calculado en el último pointermove.
     let target = { lane: null, laneId: null, snapMin: null, date: null };
 
     ev.addEventListener('pointerdown', (e) => {
-        // Solo botón principal; ignora clicks en botones internos si los hubiera.
+        // Solo botón principal; ignora clicks en botones/enlaces internos.
         if (e.button !== 0) return;
+        if (e.target.closest('a, button')) return;
         e.preventDefault();
-        dragging = true;
-        ev.setPointerCapture(e.pointerId);
+
+        armed = true;
+        dragging = false;
+        downX = e.clientX;
+        downY = e.clientY;
 
         const rect = ev.getBoundingClientRect();
         offsetY = e.clientY - rect.top;
         hDrag = rect.height;
 
-        // Ghost: clon translúcido que sigue el puntero.
-        ghost = ev.cloneNode(true);
-        ghost.classList.add('dc-ghost');
-        ghost.style.height = hDrag + 'px';
-        ev.classList.add('dc-dragging-origin');
-        document.body.appendChild(ghost);
-
-        // Placeholder: bloque "snapped" que se posiciona en el carril destino.
-        placeholder = document.createElement('div');
-        placeholder.className = 'dc-placeholder';
-        placeholder.style.height = hDrag + 'px';
-
-        // Badge flotante con la hora destino (estilo Google Calendar).
-        badge = document.createElement('div');
-        badge.className = 'dc-time-badge';
-        document.body.appendChild(badge);
-
-        update(e.clientX, e.clientY);
+        ev.setPointerCapture(e.pointerId);
     });
 
     ev.addEventListener('pointermove', (e) => {
-        if (!dragging) return;
+        if (!armed) return;
+
+        // ¿Ya superó el umbral? Entonces arrancamos el arrastre de verdad.
+        if (!dragging) {
+            const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+            if (moved < DRAG_THRESHOLD) return;
+            startDrag();
+        }
+
         update(e.clientX, e.clientY);
     });
 
     ev.addEventListener('pointerup', async (e) => {
-        if (!dragging) return;
-        dragging = false;
+        if (!armed) return;
+        armed = false;
 
+        // No hubo arrastre → fue un CLICK: abrir la hoja de acciones.
+        if (!dragging) {
+            openSessionActions(ev);
+            return;
+        }
+
+        dragging = false;
         const hadTarget = target.lane && target.snapMin !== null && target.date;
         const laneId = target.laneId;
         const snapMin = target.snapMin;
@@ -474,7 +480,29 @@ function makeDraggable(ev, ctx) {
         await commitMove(ev.dataset.sessionId, startsAt, laneId);
     });
 
-    ev.addEventListener('pointercancel', () => { if (dragging) { dragging = false; cleanup(); } });
+    ev.addEventListener('pointercancel', () => {
+        armed = false;
+        if (dragging) { dragging = false; cleanup(); }
+    });
+
+    /* Arranca el arrastre: crea ghost, placeholder y badge. */
+    function startDrag() {
+        dragging = true;
+
+        ghost = ev.cloneNode(true);
+        ghost.classList.add('dc-ghost');
+        ghost.style.height = hDrag + 'px';
+        ev.classList.add('dc-dragging-origin');
+        document.body.appendChild(ghost);
+
+        placeholder = document.createElement('div');
+        placeholder.className = 'dc-placeholder';
+        placeholder.style.height = hDrag + 'px';
+
+        badge = document.createElement('div');
+        badge.className = 'dc-time-badge';
+        document.body.appendChild(badge);
+    }
 
     /* Recalcula carril + hora snapped y actualiza ghost, placeholder y badge. */
     function update(x, y) {
@@ -544,6 +572,168 @@ function makeDraggable(ev, ctx) {
     }
 }
 
+/* ==================================================================
+ * HOJA DE ACCIONES (click en una clase del lienzo)
+ * Un click corto (sin arrastre) abre una hoja inferior con acciones. Cada
+ * acción abre el modal/función existente. Reutiliza openMove / openMoveMember.
+ * ================================================================== */
+let actionSheetEl = null;
+
+/** Renderizador genérico de hoja de acciones. actions: [{icon,label,fn,danger?,disabled?}] */
+function buildActionSheet(title, sub, actions) {
+    closeSessionActions();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay';
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeSessionActions(); });
+
+    const sheet = document.createElement('div');
+    sheet.className = 'action-sheet';
+    sheet.innerHTML =
+        `<div class="action-sheet-head">
+            <div class="action-sheet-title"></div>
+            <div class="action-sheet-sub mono"></div>
+         </div>`;
+    sheet.querySelector('.action-sheet-title').textContent = title || '';
+    sheet.querySelector('.action-sheet-sub').textContent = sub || '';
+
+    (actions.length ? actions : [{ icon: 'fa-circle-info', label: 'Sin acciones disponibles', disabled: true }])
+        .forEach((a) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'action-sheet-item' + (a.danger ? ' is-danger' : '') + (a.disabled ? ' is-disabled' : '');
+            btn.innerHTML = `<i class="fa-solid ${a.icon}"></i> <span></span>`;
+            btn.querySelector('span').textContent = a.label;
+            if (!a.disabled && a.fn) btn.addEventListener('click', a.fn);
+            sheet.appendChild(btn);
+        });
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'action-sheet-cancel';
+    cancel.textContent = 'Cerrar';
+    cancel.addEventListener('click', closeSessionActions);
+    sheet.appendChild(cancel);
+
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+    actionSheetEl = overlay;
+    requestAnimationFrame(() => overlay.classList.add('is-open'));
+    document.addEventListener('keydown', escCloseSheet);
+}
+
+function openSessionActions(cardEl) {
+    const title = cardEl.querySelector('.dc-event-title')?.textContent?.trim() || 'Clase';
+    const time  = cardEl.querySelector('.dc-event-time')?.textContent?.trim() || '';
+    const sessionId = cardEl.dataset.sessionId;
+
+    // ¿El usuario puede editar? (modales presentes = tiene permiso move-classes)
+    const canMove = !!document.getElementById('moveModal');
+    const canMoveMember = !!document.getElementById('moveMemberModal');
+
+    const actions = [];
+    if (canMove) {
+        actions.push({ icon: 'fa-arrows-up-down-left-right', label: 'Mover clase (fecha, carril, hora)', fn: () => { closeSessionActions(); SF.openMove(cardEl); } });
+        actions.push({ icon: 'fa-user-pen', label: 'Cambiar instructor', fn: () => { closeSessionActions(); SF.openMove(cardEl); setTimeout(() => document.getElementById('move-instructor')?.focus(), 300); } });
+    }
+    if (canMoveMember) {
+        actions.push({ icon: 'fa-user-group', label: 'Mover un socio de esta clase', fn: () => { closeSessionActions(); SF.openMoveMember(sessionId); } });
+    }
+    if (canMove) {
+        actions.push({ icon: 'fa-ban', label: 'Cancelar clase', danger: true, fn: () => { closeSessionActions(); cancelSessionById(sessionId); } });
+    }
+    if (!actions.length) {
+        actions.push({ icon: 'fa-circle-info', label: 'No tienes permisos para editar clases', disabled: true });
+    }
+
+    buildActionSheet(title, time, actions);
+}
+
+/* ---- Plantilla: hoja de acciones para un slot ---- */
+
+function openSlotActions(cardEl) {
+    const d = cardEl.dataset;
+    const title = d.programName || 'Clase';
+    const sub = `${d.start || ''} · ${d.duration || ''}′`;
+
+    const actions = [
+        { icon: 'fa-pen', label: 'Editar clase (programa, día, hora…)', fn: () => { closeSessionActions(); openSlotEdit(d); } },
+        { icon: 'fa-user-group', label: 'Editar roster', fn: () => { closeSessionActions(); window.location.href = d.rosterUrl; } },
+        { icon: 'fa-trash', label: 'Quitar de la plantilla', danger: true, fn: () => { closeSessionActions(); deleteSlot(d.destroyUrl); } },
+    ];
+
+    buildActionSheet(title, sub, actions);
+}
+
+/** Prefill del modal en modo edición (PUT al slot). */
+function openSlotEdit(d) {
+    const form = document.getElementById('slotForm');
+    if (!form) return;
+
+    form.action = d.updateUrl;
+    document.getElementById('slot-method').value = 'PUT';
+    document.getElementById('slotModalTitle').textContent = 'Editar clase';
+    document.getElementById('slotSubmitBtn').textContent = 'Guardar';
+
+    document.getElementById('slot-program').value    = d.program || '';
+    document.getElementById('slot-weekday').value    = d.weekday || '';
+    document.getElementById('slot-start').value      = d.start || '';
+    document.getElementById('slot-lane').value       = d.lane || '';
+    document.getElementById('slot-instructor').value = d.instructor || '';
+    document.getElementById('slot-duration').value   = d.duration || '';
+
+    SF.modal.show('slotModal');
+}
+
+/** Reset del modal a modo alta (POST store). */
+function openSlotAdd() {
+    const form = document.getElementById('slotForm');
+    if (form) {
+        form.action = form.dataset.storeUrl;
+        document.getElementById('slot-method').value = 'POST';
+        document.getElementById('slotModalTitle').textContent = 'Agregar clase';
+        document.getElementById('slotSubmitBtn').textContent = 'Agregar';
+        document.getElementById('slot-start').value = '';
+        document.getElementById('slot-duration').value = '';
+        // program/weekday/lane/instructor quedan en su primer valor por defecto.
+        document.getElementById('slot-lane').value = '';
+        document.getElementById('slot-instructor').value = '';
+    }
+    SF.modal.show('slotModal');
+}
+
+/** Enviar el form oculto de borrado al endpoint del slot. */
+function deleteSlot(destroyUrl) {
+    if (!confirm('¿Quitar esta clase de la plantilla?')) return;
+    const f = document.getElementById('slotDeleteForm');
+    if (!f) return;
+    f.action = destroyUrl;
+    f.submit();
+}
+
+function escCloseSheet(e) { if (e.key === 'Escape') closeSessionActions(); }
+
+function closeSessionActions() {
+    if (!actionSheetEl) return;
+    document.removeEventListener('keydown', escCloseSheet);
+    const el = actionSheetEl;
+    actionSheetEl = null;
+    el.classList.remove('is-open');
+    setTimeout(() => el.remove(), 180);
+}
+
+/** Cancelar directamente por id (usa el endpoint existente). */
+async function cancelSessionById(sessionId) {
+    if (!confirm('¿Cancelar esta clase?')) return;
+    try {
+        const res = await SF.http.post(`/horario/sesiones/${sessionId}/cancelar`, { notes: null });
+        SF.toast(res.message || 'Clase cancelada.');
+        setTimeout(() => location.reload(), 700);
+    } catch (e) {
+        SF.toast('No se pudo cancelar.', 'error');
+    }
+}
+
 /** Etiqueta de día abreviada (es) a partir de 'YYYY-MM-DD'. */
 function dowLabel(isoDate) {
     const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -579,7 +769,7 @@ async function commitMove(sessionId, startsAt, laneId) {
 }
 
 document.addEventListener('DOMContentLoaded', initDayCanvas);
-Object.assign(window.SF, { initDayCanvas });
+Object.assign(window.SF, { initDayCanvas, openSessionActions, closeSessionActions, openSlotActions, openSlotEdit, openSlotAdd });
 
 
 Object.assign(window.SF, { openMoveMember, submitMoveMember, filterRoster });
