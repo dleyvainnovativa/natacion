@@ -716,3 +716,66 @@ code, kbd, .mono { font-family: var(--font-mono); }
     .sheet-overlay { align-items: center; }
     .action-sheet { border-radius: 14px; }
 }
+
+/* ==================================================================
+ * ASISTENCIA MENSUAL — rejilla estilo hoja del cliente
+ * ================================================================== */
+.att-group-head {
+    padding: .6rem .9rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    border-radius: 12px 12px 0 0;
+}
+.att-group-title { font-weight: 700; letter-spacing: .02em; }
+.att-group-sub   { font-size: .82rem; color: var(--text-muted); }
+.att-group-sub .att-time {
+    font-family: var(--font-mono); font-weight: 600; color: var(--brand-teal);
+}
+
+.att-grid { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.att-grid th, .att-grid td { border: 1px solid var(--border); }
+.att-grid thead th {
+    background: var(--surface-2); font-weight: 600; text-align: center;
+    padding: .35rem .4rem; white-space: nowrap;
+}
+.att-grid .att-socio { width: 56px; text-align: center; color: var(--text-muted); padding: .3rem .4rem; }
+.att-grid .att-name  { min-width: 180px; padding: .3rem .6rem; }
+.att-grid .att-date  { width: 40px; }
+
+/* Celda de asistencia clicable */
+.att-cell {
+    width: 40px; text-align: center; cursor: pointer;
+    padding: .3rem 0; user-select: none;
+    transition: background .1s ease;
+}
+.att-cell:hover { background: var(--surface-2); }
+.att-cell:focus-visible { outline: 2px solid var(--brand-teal); outline-offset: -2px; }
+.att-mark { font-weight: 700; font-size: .82rem; }
+
+.att-present { background: rgba(132, 199, 122, .28); }
+.att-present .att-mark { color: #2e7d32; }
+.att-absent  { background: rgba(192, 57, 43, .18); }
+.att-absent  .att-mark { color: #c0392b; }
+.att-excused { background: rgba(99, 120, 175, .20); }
+.att-excused .att-mark { color: #4759a8; }
+
+/* Leyenda inline */
+.att-legend {
+    display: inline-block; min-width: 1.3em; text-align: center;
+    font-weight: 700; border-radius: 3px; padding: 0 .25em;
+}
+.att-legend.att-present { color: #2e7d32; }
+.att-legend.att-absent  { color: #c0392b; }
+.att-legend.att-excused { color: #4759a8; }
+
+/* ---- Impresión: reproducir la hoja del cliente ---- */
+@media print {
+    .no-print, .app-sidebar, .app-topbar, .app-nav-link { display: none !important; }
+    .app-content, .app-main { margin: 0 !important; padding: 0 !important; }
+    .print-title { display: block !important; font-size: 1.1rem; font-weight: 700; margin: 0 0 .5rem; }
+    .att-group { break-inside: avoid; page-break-inside: avoid; box-shadow: none !important; border: 1px solid #000; }
+    .att-grid th, .att-grid td { border: 1px solid #000; }
+    .att-cell { cursor: default; }
+    /* Conservar los colores de estado al imprimir */
+    .att-present, .att-absent, .att-excused { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

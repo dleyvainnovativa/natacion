@@ -734,6 +734,42 @@ async function cancelSessionById(sessionId) {
     }
 }
 
+/* ==================================================================
+ * ASISTENCIA MENSUAL — toggle de celda
+ * Cicla: vacío → present → absent → excused → vacío. Escribe al backend.
+ * ================================================================== */
+const ATT_CYCLE = { '': 'present', 'present': 'absent', 'absent': 'excused', 'excused': '' };
+const ATT_MARK  = { 'present': 'P', 'absent': 'F', 'excused': 'J', '': '' };
+
+async function toggleAttendanceCell(cell) {
+    const sessionId = cell.dataset.session;
+    const memberId  = cell.dataset.member;
+    const current   = cell.dataset.status || '';
+    const next      = ATT_CYCLE[current] ?? 'present';
+
+    // Optimista: pinta ya; si falla, revierte.
+    applyCellStatus(cell, next);
+
+    try {
+        const res = await SF.http.post(`/asistencia/celda/${sessionId}`, {
+            member_id: memberId,
+            status: next || null,
+        });
+        applyCellStatus(cell, res.status || '');
+    } catch (e) {
+        applyCellStatus(cell, current); // revertir
+        SF.toast('No se pudo guardar la asistencia.', 'error');
+    }
+}
+
+function applyCellStatus(cell, status) {
+    cell.classList.remove('att-present', 'att-absent', 'att-excused');
+    if (status) cell.classList.add('att-' + status);
+    cell.dataset.status = status;
+    const mark = cell.querySelector('.att-mark');
+    if (mark) mark.textContent = ATT_MARK[status] ?? '';
+}
+
 /** Etiqueta de día abreviada (es) a partir de 'YYYY-MM-DD'. */
 function dowLabel(isoDate) {
     const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -769,7 +805,7 @@ async function commitMove(sessionId, startsAt, laneId) {
 }
 
 document.addEventListener('DOMContentLoaded', initDayCanvas);
-Object.assign(window.SF, { initDayCanvas, openSessionActions, closeSessionActions, openSlotActions, openSlotEdit, openSlotAdd });
+Object.assign(window.SF, { initDayCanvas, openSessionActions, closeSessionActions, openSlotActions, openSlotEdit, openSlotAdd, toggleAttendanceCell });
 
 
 Object.assign(window.SF, { openMoveMember, submitMoveMember, filterRoster });

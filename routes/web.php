@@ -77,6 +77,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:instructor,admin')->group(function () {
         Route::get('/asistencia/alumnos', [MemberAttendanceController::class, 'index'])
             ->name('attendance.members.index');
+        Route::get('/asistencia/mensual', [MemberAttendanceController::class, 'monthlyGrid'])
+            ->name('attendance.monthly');
+        Route::post('/asistencia/celda/{session}', [MemberAttendanceController::class, 'toggleCell'])
+            ->name('attendance.cell.toggle');
         Route::get('/asistencia/alumnos/{session}', [MemberAttendanceController::class, 'show'])
             ->name('attendance.members.show');
         Route::post('/asistencia/alumnos/{session}', [MemberAttendanceController::class, 'store'])
