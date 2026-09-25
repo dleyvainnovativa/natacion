@@ -640,25 +640,12 @@ code, kbd, .mono { font-family: var(--font-mono); }
     font-size: .7rem; font-weight: 600;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* Meta oculto por defecto; se revela en hover */
+/* Meta oculto por defecto; se revela en hover si hay altura suficiente */
 .wc-event .wc-event-hover {
     display: none;
     font-size: .66rem; opacity: .9; margin-top: .1rem;
-    white-space: normal;
 }
-/* Al pasar el ratón el bloque crece para mostrar TODO el contenido sin recorte:
-   altura automática (mínimo su altura por duración), overflow visible, fondo
-   sólido y por encima de los vecinos. */
-.wc-event:hover {
-    z-index: 20;
-    box-shadow: var(--shadow);
-    height: auto !important;
-    min-height: 2.2rem;
-    overflow: visible;
-    background: var(--surface);
-    border-color: var(--brand-teal);
-}
-.wc-event:hover .dc-event-title { white-space: normal; overflow: visible; }
+.wc-event:hover { z-index: 6; box-shadow: var(--shadow); }
 .wc-event:hover .wc-event-hover { display: block; }
 
 @media (max-width: 767.98px) {
@@ -792,3 +779,6 @@ code, kbd, .mono { font-family: var(--font-mono); }
     /* Conservar los colores de estado al imprimir */
     .att-present, .att-absent, .att-excused { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Utilidad de color de marca para badges/etiquetas (p. ej. contador de filtros) */
+.bg-brand { background-color: var(--brand-teal) !important; color: #fff !important; }
