@@ -375,8 +375,57 @@ function filterRoster(input) {
     if (!list) return;
     list.querySelectorAll('.roster-item').forEach((el) => {
         const text = (el.getAttribute('data-text') || el.textContent || '').toLowerCase();
-        el.style.display = text.includes(term) ? '' : 'none';
+        if (text.includes(term)) {
+            el.classList.remove('d-none');
+        } else {
+            el.classList.add('d-none');
+        }
+        // el.style.display = text.includes(term) ? '' : 'none';
     });
+}
+
+/* ---- Agregar socio a una clase (sesión) ---- */
+let amSessionId = null;
+
+function openAddMember(sessionId) {
+    amSessionId = sessionId;
+    const warn = document.getElementById('am-warnings');
+    if (warn) warn.innerHTML = '';
+    const filter = document.getElementById('am-filter');
+    if (filter) filter.value = '';
+    filterAddMember();
+    const dateScope = document.getElementById('am-scope-date');
+    if (dateScope) dateScope.checked = true;
+    SF.modal.show('addMemberModal');
+}
+
+function filterAddMember() {
+    const term = (document.getElementById('am-filter')?.value || '').trim().toLowerCase();
+    const sel = document.getElementById('am-member');
+    if (!sel) return;
+    Array.from(sel.options).forEach((opt) => {
+        const text = opt.dataset.text || opt.textContent.toLowerCase();
+        opt.hidden = term ? !text.includes(term) : false;
+    });
+}
+
+async function submitAddMember() {
+    const memberId = document.getElementById('am-member')?.value;
+    const scope = document.querySelector('input[name="am-scope"]:checked')?.value || 'date';
+    if (!memberId) {
+        SF.toast('Elige un socio.', 'error');
+        return;
+    }
+    try {
+        const res = await SF.http.post(`/horario/sesiones/${amSessionId}/socio/agregar`, {
+            member_id: memberId,
+            scope,
+        });
+        SF.toast(res.message || 'Socio agregado.');
+        setTimeout(() => location.reload(), 650);
+    } catch (e) {
+        SF.toast(e.data?.message || 'No se pudo agregar el socio.', 'error');
+    }
 }
 
 /* ==================================================================
@@ -630,11 +679,15 @@ function openSessionActions(cardEl) {
     // ¿El usuario puede editar? (modales presentes = tiene permiso move-classes)
     const canMove = !!document.getElementById('moveModal');
     const canMoveMember = !!document.getElementById('moveMemberModal');
+    const canAddMember = !!document.getElementById('addMemberModal');
 
     const actions = [];
     if (canMove) {
         actions.push({ icon: 'fa-arrows-up-down-left-right', label: 'Mover clase (fecha, carril, hora)', fn: () => { closeSessionActions(); SF.openMove(cardEl); } });
         actions.push({ icon: 'fa-user-pen', label: 'Cambiar instructor', fn: () => { closeSessionActions(); SF.openMove(cardEl); setTimeout(() => document.getElementById('move-instructor')?.focus(), 300); } });
+    }
+    if (canAddMember) {
+        actions.push({ icon: 'fa-user-plus', label: 'Agregar socio a esta clase', fn: () => { closeSessionActions(); SF.openAddMember(sessionId); } });
     }
     if (canMoveMember) {
         actions.push({ icon: 'fa-user-group', label: 'Mover un socio de esta clase', fn: () => { closeSessionActions(); SF.openMoveMember(sessionId); } });
@@ -808,7 +861,7 @@ document.addEventListener('DOMContentLoaded', initDayCanvas);
 Object.assign(window.SF, { initDayCanvas, openSessionActions, closeSessionActions, openSlotActions, openSlotEdit, openSlotAdd, toggleAttendanceCell });
 
 
-Object.assign(window.SF, { openMoveMember, submitMoveMember, filterRoster });
+Object.assign(window.SF, { openMoveMember, submitMoveMember, filterRoster, openAddMember, submitAddMember, filterAddMember });
 
 
 Object.assign(window.SF, { initScheduleDnD });

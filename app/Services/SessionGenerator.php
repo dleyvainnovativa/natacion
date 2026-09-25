@@ -114,8 +114,13 @@ class SessionGenerator
         [$h, $m] = array_pad(explode(':', (string) $slot->start_time), 2, 0);
         $startsAt = $day->copy()->setTime((int) $h, (int) $m, 0);
 
+        // Dedup por slot + DÍA (no por hora exacta): si este slot ya tiene una
+        // sesión ese día, no crear otra. Esto evita el duplicado al arrastrar:
+        // una sesión movida cambia su starts_at y quedaría "hueco" a la hora
+        // original; sin este chequeo el generador la recrearía. Cubre también las
+        // sesiones movidas a mano (is_modified) que siguen ocupando el día.
         $exists = ClassSession::where('schedule_slot_id', $slot->id)
-            ->where('starts_at', $startsAt)
+            ->whereBetween('starts_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()])
             ->exists();
 
         if ($exists) {

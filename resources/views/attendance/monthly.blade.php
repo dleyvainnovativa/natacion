@@ -14,7 +14,29 @@
                 <input type="month" name="month" value="{{ $month }}"
                        class="form-control form-control-sm" style="width:auto"
                        onchange="document.getElementById('monthForm').submit()">
+                {{-- Conservar filtros activos al cambiar de mes --}}
+                @foreach ($filters as $fk => $fv)
+                    <input type="hidden" name="{{ $fk }}" value="{{ $fv }}">
+                @endforeach
             </form>
+
+            <button class="btn btn-outline-secondary btn-sm position-relative"
+                    type="button" data-bs-toggle="offcanvas" data-bs-target="#filtersCanvas">
+                <i class="fa-solid fa-filter me-1"></i> Filtros
+                @if (count($filters))
+                    <span class="badge rounded-pill bg-brand position-absolute top-0 start-100 translate-middle">
+                        {{ count($filters) }}
+                    </span>
+                @endif
+            </button>
+
+            @if (count($filters))
+                <a href="{{ route('attendance.monthly', ['month' => $month]) }}"
+                   class="btn btn-outline-secondary btn-sm" title="Limpiar filtros">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+            @endif
+
             <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
                 <i class="fa-solid fa-print me-1"></i> Imprimir
             </button>
@@ -83,8 +105,84 @@
     @empty
         <div class="app-card p-5 text-center text-muted">
             <i class="fa-regular fa-calendar-xmark fs-1 mb-3 d-block" style="color:var(--brand-teal)"></i>
-            No hay clases con sesiones este mes. Genera las sesiones o cambia de mes.
+            @if (count($filters))
+                No hay clases que coincidan con los filtros.
+                <a href="{{ route('attendance.monthly', ['month' => $month]) }}" class="d-block mt-2">Limpiar filtros</a>
+            @else
+                No hay clases con sesiones este mes. Genera las sesiones o cambia de mes.
+            @endif
         </div>
     @endforelse
+
+    {{-- ===================== OFFCANVAS DE FILTROS ===================== --}}
+    <div class="offcanvas offcanvas-end no-print" tabindex="-1" id="filtersCanvas" aria-labelledby="filtersCanvasLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="filtersCanvasLabel"><i class="fa-solid fa-filter me-2"></i>Filtros</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+        </div>
+        <div class="offcanvas-body">
+            <form method="GET" action="{{ route('attendance.monthly') }}">
+                <input type="hidden" name="month" value="{{ $month }}">
+
+                <div class="mb-3">
+                    <label class="form-label small">Instructor</label>
+                    <select name="instructor" class="form-select">
+                        <option value="">Todos</option>
+                        @foreach ($instructors as $i)
+                            <option value="{{ $i->id }}" @selected(($filters['instructor'] ?? null) == $i->id)>{{ $i->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small">Carril</label>
+                    <select name="lane" class="form-select">
+                        <option value="">Todos</option>
+                        @foreach ($lanes as $l)
+                            <option value="{{ $l->id }}" @selected(($filters['lane'] ?? null) == $l->id)>{{ $l->label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small">Socio (nombre o número)</label>
+                    <input type="text" name="member" class="form-control"
+                           value="{{ $filters['member'] ?? '' }}" placeholder="Ej. 2314 o Sofia">
+                    @if ($memberNotFound)
+                        <div class="form-text text-danger">No se encontró ningún socio con ese texto.</div>
+                    @else
+                        <div class="form-text">Muestra solo las clases y la fila de ese socio.</div>
+                    @endif
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small">Desde</label>
+                        <input type="date" name="from" class="form-control"
+                               min="{{ $monthStartDay }}" max="{{ $monthEndDay }}"
+                               value="{{ $filters['from'] ?? '' }}">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">Hasta</label>
+                        <input type="date" name="to" class="form-control"
+                               min="{{ $monthStartDay }}" max="{{ $monthEndDay }}"
+                               value="{{ $filters['to'] ?? '' }}">
+                    </div>
+                    <div class="col-12">
+                        <div class="form-text">Limita las columnas de fecha dentro del mes.</div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-brand flex-fill">
+                        <i class="fa-solid fa-check me-1"></i> Aplicar
+                    </button>
+                    <a href="{{ route('attendance.monthly', ['month' => $month]) }}" class="btn btn-outline-secondary">
+                        Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
 
 @endsection

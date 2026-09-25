@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\Role;
 use App\Models\ClassSession;
+use App\Models\Member;
 use App\Models\MemberAttendance;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -24,10 +25,45 @@ class MemberAttendanceController extends Controller
         $monthStart = $monthRef->copy()->startOfMonth();
         $monthEnd   = $monthRef->copy()->endOfMonth();
 
-        // Sesiones del mes (no canceladas) con lo necesario para armar la rejilla.
-        $sessions = ClassSession::query()
-            ->whereBetween('starts_at', [$monthStart, $monthEnd])
+        // --- Filtros (opcionales) ---
+        $fInstructor = $request->integer('instructor') ?: null;
+        $fLane       = $request->integer('lane') ?: null;
+        $fMember     = trim((string) $request->query('member', ''));   // texto: nombre o # socio
+        $fFrom       = $request->query('from');                        // Y-m-d dentro del mes
+        $fTo         = $request->query('to');
+
+        // Rango de fechas efectivo (acotado al mes).
+        $rangeStart = $fFrom && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fFrom)
+            ? Carbon::parse($fFrom)->max($monthStart)->startOfDay() : $monthStart;
+        $rangeEnd = $fTo && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fTo)
+            ? Carbon::parse($fTo)->min($monthEnd)->endOfDay() : $monthEnd;
+
+        // Resolver el socio buscado (nombre o número) a un id, si aplica.
+        $memberId = null;
+        if ($fMember !== '') {
+            $q = Member::query();
+            if (ctype_digit($fMember)) {
+                $q->where('socio_number', (int) $fMember);
+            } else {
+                foreach (preg_split('/\s+/', $fMember) as $tok) {
+                    $q->where(fn ($w) => $w->where('first_name', 'like', "%{$tok}%")
+                        ->orWhere('last_name_1', 'like', "%{$tok}%")
+                        ->orWhere('last_name_2', 'like', "%{$tok}%"));
+                }
+            }
+            $memberId = $q->orderBy('last_name_1')->value('id');
+        }
+
+        // Si buscaron un socio por texto y no existe, no hay resultados.
+        $memberSearchFailed = ($fMember !== '' && $memberId === null);
+
+        // Sesiones del rango (no canceladas) con lo necesario para armar la rejilla.
+        $sessions = $memberSearchFailed ? collect() : ClassSession::query()
+            ->whereBetween('starts_at', [$rangeStart, $rangeEnd])
             ->where('status', '!=', 'cancelled')
+            ->when($fInstructor, fn ($qq) => $qq->where('actual_instructor_id', $fInstructor))
+            ->when($fLane, fn ($qq) => $qq->where('lane_id', $fLane))
+            ->when($memberId, fn ($qq) => $qq->whereHas('members', fn ($w) => $w->where('members.id', $memberId)))
             ->with([
                 'program',
                 'lane',
@@ -64,14 +100,19 @@ class MemberAttendanceController extends Controller
             $g['dates'][$dateKey] = $s->id;
             $g['sessionByDate'][$dateKey] = $s->id;
 
-            foreach ($s->members as $m) {
+            // Si se filtra por socio, solo mostramos SU fila dentro de la clase.
+            $members = $memberId
+                ? $s->members->where('id', $memberId)
+                : $s->members;
+
+            foreach ($members as $m) {
                 $g['roster'][$m->id] ??= [
                     'socio' => $m->socio_number,
                     'name'  => trim(($m->first_name ?? '') . ' ' . ($m->last_name_1 ?? '')),
                 ];
             }
             $attByMember = $s->memberAttendances->keyBy('member_id');
-            foreach ($s->members as $m) {
+            foreach ($members as $m) {
                 $g['marks'][$m->id][$dateKey] = $attByMember->get($m->id)?->status; // present|absent|excused|null
             }
             unset($g);
@@ -86,12 +127,28 @@ class MemberAttendanceController extends Controller
 
         $months = \App\Models\ScheduleTemplate::orderByDesc('year')->orderByDesc('month')->get();
 
+        // Datos para los filtros del offcanvas.
+        $activeFilters = array_filter([
+            'instructor' => $fInstructor,
+            'lane'       => $fLane,
+            'member'     => $fMember !== '' ? $fMember : null,
+            'from'       => $fFrom,
+            'to'         => $fTo,
+        ], fn ($v) => $v !== null && $v !== '');
+
         return view('attendance.monthly', [
             'groups'   => $groups,
             'month'    => $monthStart->format('Y-m'),
             'monthLabel' => $this->monthLabel($monthStart),
             'months'   => $months,
             'weekdays' => [1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado', 7 => 'Domingo'],
+            // Filtros
+            'instructors'   => \App\Models\Instructor::where('active', true)->orderBy('name')->get(['id', 'name']),
+            'lanes'         => \App\Models\Lane::orderBy('position')->get(['id', 'label']),
+            'filters'       => $activeFilters,
+            'monthStartDay' => $monthStart->toDateString(),
+            'monthEndDay'   => $monthEnd->toDateString(),
+            'memberNotFound' => ($fMember !== '' && $memberId === null),
         ]);
     }
 

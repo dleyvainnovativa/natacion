@@ -640,12 +640,25 @@ code, kbd, .mono { font-family: var(--font-mono); }
     font-size: .7rem; font-weight: 600;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* Meta oculto por defecto; se revela en hover si hay altura suficiente */
+/* Meta oculto por defecto; se revela en hover */
 .wc-event .wc-event-hover {
     display: none;
     font-size: .66rem; opacity: .9; margin-top: .1rem;
+    white-space: normal;
 }
-.wc-event:hover { z-index: 6; box-shadow: var(--shadow); }
+/* Al pasar el ratón el bloque crece para mostrar TODO el contenido sin recorte:
+   altura automática (mínimo su altura por duración), overflow visible, fondo
+   sólido y por encima de los vecinos. */
+.wc-event:hover {
+    z-index: 20;
+    box-shadow: var(--shadow);
+    height: auto !important;
+    min-height: 2.2rem;
+    overflow: visible;
+    background: var(--surface);
+    border-color: var(--brand-teal);
+}
+.wc-event:hover .dc-event-title { white-space: normal; overflow: visible; }
 .wc-event:hover .wc-event-hover { display: block; }
 
 @media (max-width: 767.98px) {

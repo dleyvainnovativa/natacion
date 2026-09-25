@@ -55,6 +55,10 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/horario/sesiones/{from}/socio', [SessionMemberController::class, 'move'])
             ->name('schedule.sessions.move-member');
+        Route::post('/horario/sesiones/{session}/socio/agregar', [SessionMemberController::class, 'add'])
+            ->name('schedule.sessions.add-member');
+        Route::post('/horario/sesiones/{session}/socio/quitar', [SessionMemberController::class, 'remove'])
+            ->name('schedule.sessions.remove-member');
     });
 
     // =====================================================================
