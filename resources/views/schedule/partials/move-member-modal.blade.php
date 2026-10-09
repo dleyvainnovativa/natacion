@@ -44,7 +44,6 @@
     </div>
 </div>
 
-{{-- El payload viene ya armado del controlador ($sessionsPayload). --}}
-<script>
-    window.SF_SESSIONS = {{ Illuminate\Support\Js::from($sessionsPayload ?? []) }};
-</script>
+{{-- El payload de sesiones (window.SF_SESSIONS) ahora se emite en
+     partials/sessions-payload.blade.php, incluido sin depender de permisos,
+     para que "Ver alumnos" funcione también para roles sin edición. --}}

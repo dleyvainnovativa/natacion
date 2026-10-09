@@ -369,6 +369,7 @@ async function submitMoveMember() {
  * Se llama con oninput. Compara contra data-text (o el texto visible).
  */
 function filterRoster(input) {
+    console.log('filterRoster called with input:', input.value);
     const term = (input.value || '').trim().toLowerCase();
     const list = input.closest('form')?.querySelector('#roster-list')
               || document.getElementById('roster-list');
@@ -382,50 +383,6 @@ function filterRoster(input) {
         }
         // el.style.display = text.includes(term) ? '' : 'none';
     });
-}
-
-/* ---- Agregar socio a una clase (sesión) ---- */
-let amSessionId = null;
-
-function openAddMember(sessionId) {
-    amSessionId = sessionId;
-    const warn = document.getElementById('am-warnings');
-    if (warn) warn.innerHTML = '';
-    const filter = document.getElementById('am-filter');
-    if (filter) filter.value = '';
-    filterAddMember();
-    const dateScope = document.getElementById('am-scope-date');
-    if (dateScope) dateScope.checked = true;
-    SF.modal.show('addMemberModal');
-}
-
-function filterAddMember() {
-    const term = (document.getElementById('am-filter')?.value || '').trim().toLowerCase();
-    const sel = document.getElementById('am-member');
-    if (!sel) return;
-    Array.from(sel.options).forEach((opt) => {
-        const text = opt.dataset.text || opt.textContent.toLowerCase();
-        opt.hidden = term ? !text.includes(term) : false;
-    });
-}
-
-async function submitAddMember() {
-    const memberId = document.getElementById('am-member')?.value;
-    const scope = document.querySelector('input[name="am-scope"]:checked')?.value || 'date';
-    if (!memberId) {
-        SF.toast('Elige un socio.', 'error');
-        return;
-    }
-    try {
-        const res = await SF.http.post(`/horario/sesiones/${amSessionId}/socio/agregar`, {
-            member_id: memberId,
-            scope,
-        });
-        SF.toast(res.message || 'Socio agregado.');
-        setTimeout(() => location.reload(), 650);
-    } catch (e) {
-        SF.toast(e.data?.message || 'No se pudo agregar el socio.', 'error');
-    }
 }
 
 /* ==================================================================
@@ -628,8 +585,13 @@ function makeDraggable(ev, ctx) {
  * ================================================================== */
 let actionSheetEl = null;
 
-/** Renderizador genérico de hoja de acciones. actions: [{icon,label,fn,danger?,disabled?}] */
-function buildActionSheet(title, sub, actions) {
+/**
+ * Renderizador genérico de hoja de acciones.
+ *   actions: [{icon,label,fn,danger?,disabled?}]
+ *   opts.roster: lista opcional de socios [{socio,name}] que se muestra en una
+ *   sección colapsable "Ver alumnos (N)" arriba de las acciones.
+ */
+function buildActionSheet(title, sub, actions, opts = {}) {
     closeSessionActions();
 
     const overlay = document.createElement('div');
@@ -645,6 +607,41 @@ function buildActionSheet(title, sub, actions) {
          </div>`;
     sheet.querySelector('.action-sheet-title').textContent = title || '';
     sheet.querySelector('.action-sheet-sub').textContent = sub || '';
+
+    // Sección de alumnos (colapsable).
+    if (opts.roster) {
+        const roster = opts.roster;
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'action-sheet-item as-roster-toggle';
+        toggle.innerHTML = `<i class="fa-solid fa-users"></i> <span></span> <i class="fa-solid fa-chevron-down as-caret"></i>`;
+        toggle.querySelector('span').textContent = `Ver alumnos (${roster.length})`;
+
+        const list = document.createElement('div');
+        list.className = 'as-roster-list';
+        if (!roster.length) {
+            list.innerHTML = `<div class="as-roster-empty">Esta clase no tiene alumnos.</div>`;
+        } else {
+            roster.forEach((m) => {
+                const row = document.createElement('div');
+                row.className = 'as-roster-row';
+                const num = document.createElement('span');
+                num.className = 'as-roster-num mono';
+                num.textContent = m.socio ? `#${m.socio}` : '';
+                const nm = document.createElement('span');
+                nm.className = 'as-roster-name';
+                nm.textContent = m.name || '—';
+                row.appendChild(num); row.appendChild(nm);
+                list.appendChild(row);
+            });
+        }
+        toggle.addEventListener('click', () => {
+            const open = sheet.classList.toggle('as-roster-open');
+            toggle.querySelector('.as-caret').style.transform = open ? 'rotate(180deg)' : '';
+        });
+        sheet.appendChild(toggle);
+        sheet.appendChild(list);
+    }
 
     (actions.length ? actions : [{ icon: 'fa-circle-info', label: 'Sin acciones disponibles', disabled: true }])
         .forEach((a) => {
@@ -679,15 +676,11 @@ function openSessionActions(cardEl) {
     // ¿El usuario puede editar? (modales presentes = tiene permiso move-classes)
     const canMove = !!document.getElementById('moveModal');
     const canMoveMember = !!document.getElementById('moveMemberModal');
-    const canAddMember = !!document.getElementById('addMemberModal');
 
     const actions = [];
     if (canMove) {
         actions.push({ icon: 'fa-arrows-up-down-left-right', label: 'Mover clase (fecha, carril, hora)', fn: () => { closeSessionActions(); SF.openMove(cardEl); } });
         actions.push({ icon: 'fa-user-pen', label: 'Cambiar instructor', fn: () => { closeSessionActions(); SF.openMove(cardEl); setTimeout(() => document.getElementById('move-instructor')?.focus(), 300); } });
-    }
-    if (canAddMember) {
-        actions.push({ icon: 'fa-user-plus', label: 'Agregar socio a esta clase', fn: () => { closeSessionActions(); SF.openAddMember(sessionId); } });
     }
     if (canMoveMember) {
         actions.push({ icon: 'fa-user-group', label: 'Mover un socio de esta clase', fn: () => { closeSessionActions(); SF.openMoveMember(sessionId); } });
@@ -699,7 +692,11 @@ function openSessionActions(cardEl) {
         actions.push({ icon: 'fa-circle-info', label: 'No tienes permisos para editar clases', disabled: true });
     }
 
-    buildActionSheet(title, time, actions);
+    // Roster de la clase (desde el payload ya serializado en la página).
+    const sess = (window.SF_SESSIONS || []).find((s) => String(s.id) === String(sessionId));
+    const roster = sess ? sess.members : [];
+
+    buildActionSheet(title, time, actions, { roster });
 }
 
 /* ---- Plantilla: hoja de acciones para un slot ---- */
@@ -861,7 +858,7 @@ document.addEventListener('DOMContentLoaded', initDayCanvas);
 Object.assign(window.SF, { initDayCanvas, openSessionActions, closeSessionActions, openSlotActions, openSlotEdit, openSlotAdd, toggleAttendanceCell });
 
 
-Object.assign(window.SF, { openMoveMember, submitMoveMember, filterRoster, openAddMember, submitAddMember, filterAddMember });
+Object.assign(window.SF, { openMoveMember, submitMoveMember, filterRoster });
 
 
 Object.assign(window.SF, { initScheduleDnD });

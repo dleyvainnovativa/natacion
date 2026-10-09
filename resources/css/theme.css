@@ -706,6 +706,29 @@ code, kbd, .mono { font-family: var(--font-mono); }
 }
 .action-sheet-cancel:hover { background: var(--border); }
 
+/* --- Sección "Ver alumnos" dentro de la hoja de acciones --- */
+.as-roster-toggle .as-caret {
+    margin-left: auto; font-size: .8rem; color: var(--text-muted);
+    transition: transform .15s ease;
+}
+.as-roster-list {
+    display: none;
+    max-height: 42vh; overflow-y: auto;
+    margin: .1rem .2rem .4rem;
+    border: 1px solid var(--border); border-radius: 10px;
+}
+.action-sheet.as-roster-open .as-roster-list { display: block; }
+.as-roster-row {
+    display: flex; align-items: baseline; gap: .6rem;
+    padding: .4rem .7rem;
+    border-bottom: 1px solid var(--border);
+    font-size: .9rem;
+}
+.as-roster-row:last-child { border-bottom: 0; }
+.as-roster-num { color: var(--brand-teal); font-size: .8rem; min-width: 3.2rem; }
+.as-roster-name { color: var(--text); }
+.as-roster-empty { padding: .7rem; color: var(--text-muted); font-size: .85rem; text-align: center; }
+
 /* Tarjeta de slot en la plantilla: clicable → hoja de acciones */
 .slot-card { cursor: pointer; transition: box-shadow .12s ease, transform .12s ease; }
 .slot-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
@@ -779,6 +802,3 @@ code, kbd, .mono { font-family: var(--font-mono); }
     /* Conservar los colores de estado al imprimir */
     .att-present, .att-absent, .att-excused { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
-
-/* Utilidad de color de marca para badges/etiquetas (p. ej. contador de filtros) */
-.bg-brand { background-color: var(--brand-teal) !important; color: #fff !important; }

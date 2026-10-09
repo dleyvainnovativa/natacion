@@ -175,10 +175,11 @@
             aviso pero se permite. Toca el encabezado de un día para verlo en detalle.
         </p>
     @endunless
+    @include('schedule.partials.sessions-payload')
+
 
     @can('move-classes')
         @include('schedule.partials.move-modal')
         @include('schedule.partials.move-member-modal')
-        @include('schedule.partials.add-member-modal')
     @endcan
 @endsection

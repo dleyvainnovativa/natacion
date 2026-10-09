@@ -35,7 +35,7 @@ class ScheduleController extends Controller
                 'lane',
                 'actualInstructor',
                 'scheduledInstructor',
-                'members:id,first_name,last_name_1'
+                'members:id,socio_number,first_name,last_name_1'
             ])
             ->orderBy('starts_at')
             ->get();
@@ -75,7 +75,6 @@ class ScheduleController extends Controller
             'allLanes'      => Lane::orderBy('position')->get(), // para el filtro
             'filters'       => $request->only(['instructor', 'program', 'lane']),
             'sessionsPayload' => $this->sessionsPayload($sessions),
-            'allMembers'      => \App\Models\Member::orderBy('last_name_1')->orderBy('first_name')->get(['id','first_name','last_name_1','socio_number']),
         ]);
     }
 
@@ -101,7 +100,7 @@ class ScheduleController extends Controller
                 'lane',
                 'actualInstructor',
                 'scheduledInstructor',
-                'members:id,first_name,last_name_1'
+                'members:id,socio_number,first_name,last_name_1'
             ])
             ->orderBy('starts_at')
             ->get();
@@ -128,7 +127,6 @@ class ScheduleController extends Controller
             'programs'    => Program::where('active', true)->orderBy('name')->get(),
             'filters'     => $request->only(['instructor', 'program']),
             'sessionsPayload' => $this->sessionsPayload($sessions),
-            'allMembers'      => \App\Models\Member::orderBy('last_name_1')->orderBy('first_name')->get(['id','first_name','last_name_1','socio_number']),
         ]);
     }
 
@@ -185,10 +183,13 @@ class ScheduleController extends Controller
             return [
                 'id'      => (string) $s->id,
                 'label'   => $label,
-                'members' => $s->members->map(fn($m) => [
-                    'id'   => (string) $m->id,
-                    'name' => trim(($m->first_name ?? '') . ' ' . ($m->last_name_1 ?? '')) ?: ('Socio #' . $m->id),
-                ])->values()->all(),
+                'members' => $s->members
+                    ->sortBy(fn($m) => mb_strtolower(trim(($m->last_name_1 ?? '') . ' ' . ($m->first_name ?? ''))))
+                    ->map(fn($m) => [
+                        'id'    => (string) $m->id,
+                        'socio' => $m->socio_number,
+                        'name'  => trim(($m->first_name ?? '') . ' ' . ($m->last_name_1 ?? '')) ?: ('Socio #' . $m->id),
+                    ])->values()->all(),
             ];
         })->values()->all();
     }
@@ -197,10 +198,10 @@ class ScheduleController extends Controller
 
     private function ensureWeekGenerated(Carbon $ref, SessionGenerator $generator): void
     {
-        // generateWeek es idempotente (dedup por slot+DÍA y respeta is_modified),
-        // así que lo ejecutamos siempre que haya slots activos. Antes se saltaba
-        // si la semana ya tenía ALGUNA sesión, lo que impedía que un slot
-        // agregado después apareciera en una semana ya poblada.
+        // generateWeek es idempotente (dedup por slot+fecha y respeta
+        // is_modified), así que lo ejecutamos siempre que haya slots activos.
+        // Antes se saltaba si la semana ya tenía ALGUNA sesión, lo que impedía
+        // que un slot agregado después apareciera en una semana ya poblada.
         if (ScheduleSlot::where('active', true)->exists()) {
             $generator->generateWeek($ref);
         }

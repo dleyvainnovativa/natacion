@@ -178,11 +178,12 @@
         Arrastra una clase a otro carril u hora (se ajusta cada 10 min). La duración
         la fija el programa. Si el carril queda ocupado a esa hora, verás un aviso pero se permite.
     </p>
+    @include('schedule.partials.sessions-payload')
+
 
     @can('move-classes')
         <div id="dc-toast-anchor"></div>
         @include('schedule.partials.move-modal')
         @include('schedule.partials.move-member-modal')
-        @include('schedule.partials.add-member-modal')
     @endcan
 @endsection
