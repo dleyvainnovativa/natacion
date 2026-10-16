@@ -82,96 +82,50 @@
         @endif
     </form>
 
-    {{-- LIENZO DEL DÍA --}}
-    <div class="day-canvas app-card"
-         style="--px-per-min: {{ $pxPerMin }}; --canvas-h: {{ $canvasH }}px; --start-min: {{ $startMin }};"
+    {{-- LIENZO DEL DÍA (misma rejilla que la semana: cabecera + gutter pegajosos,
+         columnas de carril flexibles a lo ancho). --}}
+    @php
+        $dayLanes = $lanes->map(fn ($l) => ['id' => $l->id, 'label' => $l->label])->all();
+        if (! empty($byLane[0])) { $dayLanes[] = ['id' => 0, 'label' => 'Sin carril']; }
+    @endphp
+    <div class="cal cal--day day-canvas app-card"
+         style="--px-per-min: {{ $pxPerMin }}; --canvas-h: {{ $canvasH }}px; --cols: {{ count($dayLanes) }};"
          data-start-min="{{ $startMin }}"
          data-end-min="{{ $endMin }}"
          data-date="{{ $date->toDateString() }}">
 
-        {{-- Columna de horas (gutter) --}}
-        <div class="dc-gutter">
-            <div class="dc-lane-head">&nbsp;</div>
-            <div class="dc-hours" style="height: var(--canvas-h)">
+        {{-- Cabecera: esquina + carriles (una sola fila) --}}
+        <div class="cal-head">
+            <div class="cal-corner" style="grid-row: 1"></div>
+            @foreach ($dayLanes as $j => $rl)
+                <div class="cal-lanehead {{ $rl['id'] === 0 ? 'text-muted' : '' }}"
+                     style="grid-column: {{ 2 + $j }}; grid-row: 1;">{{ $rl['label'] }}</div>
+            @endforeach
+        </div>
+
+        {{-- Cuerpo: gutter + una columna por carril --}}
+        <div class="cal-body">
+            <div class="cal-gutter" style="height: var(--canvas-h)">
                 @for ($m = $startMin; $m <= $endMin; $m += 60)
                     <div class="dc-hour-line" style="top: {{ ($m - $startMin) * $pxPerMin }}px">
                         <span class="dc-hour-label">{{ sprintf('%02d:%02d', intdiv($m,60), $m%60) }}</span>
                     </div>
                 @endfor
             </div>
-        </div>
 
-        {{-- Una columna por carril --}}
-        <div class="dc-lanes">
-            @foreach ($lanes as $lane)
-                <div class="dc-lane" data-lane-id="{{ $lane->id }}">
-                    <div class="dc-lane-head">{{ $lane->label }}</div>
-                    <div class="dc-lane-body" style="height: var(--canvas-h)"
-                         data-lane-id="{{ $lane->id }}"
-                         data-date="{{ $date->toDateString() }}">
-                        {{-- Líneas de hora de fondo --}}
-                        @for ($m = $startMin; $m <= $endMin; $m += 60)
-                            <div class="dc-grid-line" style="top: {{ ($m - $startMin) * $pxPerMin }}px"></div>
-                        @endfor
-
-                        {{-- Clases de este carril --}}
-                        @foreach (($byLane[$lane->id] ?? []) as $s)
-                            @php
-                                $mins = $s->starts_at->hour * 60 + $s->starts_at->minute;
-                                $top  = ($mins - $startMin) * $pxPerMin;
-                                $h    = max(24, $s->duration_min * $pxPerMin); // mínimo visible
-                                $color = $s->program?->color ?? 'teal';
-                                $subbed = $s->actual_instructor_id
-                                       && $s->actual_instructor_id !== $s->scheduled_instructor_id;
-                            @endphp
-                            <div class="dc-event chip-{{ $color }}"
-                                 style="top: {{ $top }}px; height: {{ $h }}px"
-                                 data-session-id="{{ $s->id }}"
-                                 data-duration="{{ $s->duration_min }}"
-                                 data-starts="{{ $s->starts_at->format('Y-m-d\TH:i') }}"
-                                 data-lane="{{ $s->lane_id }}"
-                                 data-instructor="{{ $s->scheduled_instructor_id }}">
-                                <div class="dc-event-time mono">{{ $s->starts_at->format('H:i') }}</div>
-                                <div class="dc-event-title">{{ $s->program?->name ?? 'Clase' }}</div>
-                                <div class="dc-event-meta">
-                                    {{ $s->actualInstructor?->name ?? '—' }}
-                                    @if ($subbed)<span class="badge-role">supl.</span>@endif
-                                    · <i class="fa-solid fa-users"></i> {{ $s->members->count() }}
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
+            @foreach ($dayLanes as $j => $rl)
+                <div class="cal-col dc-lane-body"
+                     style="grid-column: {{ 2 + $j }}; height: var(--canvas-h)"
+                     data-lane-id="{{ $rl['id'] ?: '' }}"
+                     data-date="{{ $date->toDateString() }}">
+                    @for ($m = $startMin; $m <= $endMin; $m += 60)
+                        <div class="dc-grid-line" style="top: {{ ($m - $startMin) * $pxPerMin }}px"></div>
+                    @endfor
+                    @foreach (($byLane[$rl['id']] ?? []) as $s)
+                        @include('schedule.partials.cal-event', ['s' => $s, 'pxPerMin' => $pxPerMin, 'startMin' => $startMin])
+                    @endforeach
                 </div>
             @endforeach
-
-            {{-- Columna "sin carril" (solo si hay clases sin asignar) --}}
-            @if (! empty($byLane[0]))
-                <div class="dc-lane" data-lane-id="">
-                    <div class="dc-lane-head text-muted">Sin carril</div>
-                    <div class="dc-lane-body" style="height: var(--canvas-h)" data-lane-id="" data-date="{{ $date->toDateString() }}">
-                        @for ($m = $startMin; $m <= $endMin; $m += 60)
-                            <div class="dc-grid-line" style="top: {{ ($m - $startMin) * $pxPerMin }}px"></div>
-                        @endfor
-                        @foreach ($byLane[0] as $s)
-                            @php
-                                $mins = $s->starts_at->hour * 60 + $s->starts_at->minute;
-                                $top  = ($mins - $startMin) * $pxPerMin;
-                                $h    = max(24, $s->duration_min * $pxPerMin);
-                            @endphp
-                            <div class="dc-event chip-teal"
-                                 style="top: {{ $top }}px; height: {{ $h }}px"
-                                 data-session-id="{{ $s->id }}"
-                                 data-duration="{{ $s->duration_min }}"
-                                 data-starts="{{ $s->starts_at->format('Y-m-d\TH:i') }}"
-                                 data-lane=""
-                                 data-instructor="{{ $s->scheduled_instructor_id }}">
-                                <div class="dc-event-time mono">{{ $s->starts_at->format('H:i') }}</div>
-                                <div class="dc-event-title">{{ $s->program?->name ?? 'Clase' }}</div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
         </div>
     </div>
 

@@ -58,6 +58,51 @@ class EnrollmentService
     }
 
     /**
+     * Sincroniza el roster recurrente de UN slot al set de socios dado, y
+     * aplica el cambio a las sesiones ya generadas de hoy en adelante
+     * (agrega los nuevos, quita los removidos). Esto arregla el bug de que el
+     * roster solo aparecía "el próximo mes": ahora se refleja esta misma semana.
+     *
+     * @param  int[]  $memberIds
+     */
+    public function syncSlotRoster(ScheduleSlot $slot, array $memberIds): void
+    {
+        $memberIds = array_values(array_unique(array_map('intval', $memberIds)));
+
+        $current = $slot->members()->pluck('members.id')->all();
+        $toAdd    = array_diff($memberIds, $current);
+        $toRemove = array_diff($current, $memberIds);
+
+        DB::transaction(function () use ($slot, $memberIds, $toAdd, $toRemove) {
+            $slot->members()->sync($memberIds);
+
+            if (! $toAdd && ! $toRemove) {
+                return;
+            }
+
+            $sessionIds = ClassSession::where('schedule_slot_id', $slot->id)
+                ->where('starts_at', '>=', Carbon::today()->startOfDay())
+                ->where('status', '!=', 'cancelled')
+                ->pluck('id');
+
+            foreach ($sessionIds as $sessionId) {
+                foreach ($toAdd as $mid) {
+                    DB::table('session_members')->updateOrInsert(
+                        ['class_session_id' => $sessionId, 'member_id' => $mid],
+                        ['updated_at' => now(), 'created_at' => now()],
+                    );
+                }
+                if ($toRemove) {
+                    DB::table('session_members')
+                        ->where('class_session_id', $sessionId)
+                        ->whereIn('member_id', $toRemove)
+                        ->delete();
+                }
+            }
+        });
+    }
+
+    /**
      * Sincroniza EXACTAMENTE el set de slots de un socio: inscribe los nuevos y
      * quita los que ya no estén marcados (del roster recurrente y de sus
      * sesiones futuras). Se usa en la página "Inscribir a clases".

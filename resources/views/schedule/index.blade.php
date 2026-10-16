@@ -104,90 +104,66 @@
             No hay clases esta semana con estos filtros.
         </div>
     @else
-        {{-- LIENZO SEMANAL: gutter de horas + 7 grupos de día, cada uno con sus
-             carriles. Desplazable en horizontal (21 columnas caben con scroll). --}}
-        <div class="week-canvas app-card"
-             style="--px-per-min: {{ $pxPerMin }}; --canvas-h: {{ $canvasH }}px; --start-min: {{ $startMin }};"
+        @php $L = count($renderLanes); @endphp
+        {{-- LIENZO SEMANAL (rejilla reconstruida): un solo contenedor con scroll,
+             cabecera pegajosa arriba, gutter de horas pegajoso a la izquierda,
+             columnas flexibles (llenan el ancho; sólo hacen scroll si no caben). --}}
+        <div class="cal week-canvas app-card"
+             style="--px-per-min: {{ $pxPerMin }}; --canvas-h: {{ $canvasH }}px; --cols: {{ count($weekdays) * $L }};"
              data-start-min="{{ $startMin }}"
              data-end-min="{{ $endMin }}">
 
-            {{-- Gutter de horas (izquierda, pegajoso) --}}
-            <div class="wc-gutter">
-                <div class="wc-day-head">&nbsp;</div>
-                <div class="wc-lane-head">&nbsp;</div>
-                <div class="wc-hours" style="height: var(--canvas-h)">
+            {{-- Cabecera: esquina + día (abarca sus carriles) + carriles --}}
+            <div class="cal-head">
+                <div class="cal-corner"></div>
+                @foreach ($weekdays as $iso => $label)
+                    @php $dayDate = $weekStart->copy()->addDays($iso - 1); $startCol = 2 + $loop->index * $L; @endphp
+                    <a class="cal-dayhead {{ $dayDate->isToday() ? 'is-today' : '' }}"
+                       style="grid-column: {{ $startCol }} / span {{ $L }};"
+                       href="{{ route('schedule.day', array_merge($filters, ['date' => $dayDate->toDateString()])) }}"
+                       title="Ver el día en detalle">
+                        <span class="cd-day">{{ $label }}</span>
+                        <span class="cd-date">{{ $dayDate->format('d/m') }}</span>
+                    </a>
+                    @foreach ($renderLanes as $j => $rl)
+                        <div class="cal-lanehead {{ $j === $L - 1 ? 'cal-daysep' : '' }}"
+                             style="grid-column: {{ $startCol + $j }};">{{ $rl['label'] }}</div>
+                    @endforeach
+                @endforeach
+            </div>
+
+            {{-- Cuerpo: gutter de horas + una columna por (día × carril) --}}
+            <div class="cal-body">
+                <div class="cal-gutter" style="height: var(--canvas-h)">
                     @for ($m = $startMin; $m <= $endMin; $m += 60)
                         <div class="dc-hour-line" style="top: {{ ($m - $startMin) * $pxPerMin }}px">
                             <span class="dc-hour-label">{{ sprintf('%02d:%02d', intdiv($m,60), $m%60) }}</span>
                         </div>
                     @endfor
                 </div>
+
+                @foreach ($weekdays as $iso => $label)
+                    @php $dayDate = $weekStart->copy()->addDays($iso - 1); $startCol = 2 + $loop->index * $L; @endphp
+                    @foreach ($renderLanes as $j => $rl)
+                        <div class="cal-col dc-lane-body {{ $j === $L - 1 ? 'cal-daysep' : '' }}"
+                             style="grid-column: {{ $startCol + $j }}; height: var(--canvas-h)"
+                             data-lane-id="{{ $rl['id'] ?: '' }}"
+                             data-date="{{ $dayDate->toDateString() }}">
+                            @for ($m = $startMin; $m <= $endMin; $m += 60)
+                                <div class="dc-grid-line" style="top: {{ ($m - $startMin) * $pxPerMin }}px"></div>
+                            @endfor
+                            @foreach (($byDay[$iso][$rl['id']] ?? []) as $s)
+                                @include('schedule.partials.cal-event', ['s' => $s, 'pxPerMin' => $pxPerMin, 'startMin' => $startMin])
+                            @endforeach
+                        </div>
+                    @endforeach
+                @endforeach
             </div>
-
-            {{-- Un grupo por día --}}
-            @foreach ($weekdays as $iso => $label)
-                @php $dayDate = $weekStart->copy()->addDays($iso - 1); @endphp
-                <div class="wc-day @if($dayDate->isToday()) wc-day-today @endif">
-                    <div class="wc-day-head">
-                        <a class="tg-day-link"
-                           href="{{ route('schedule.day', array_merge($filters, ['date' => $dayDate->toDateString()])) }}"
-                           title="Ver el día en detalle">
-                            <span class="tg-day">{{ $label }}</span>
-                            <span class="tg-date">{{ $dayDate->format('d/m') }}</span>
-                        </a>
-                    </div>
-
-                    <div class="wc-lanes">
-                        @foreach ($renderLanes as $rl)
-                            <div class="wc-lane">
-                                <div class="wc-lane-head @if($rl['id']===0) text-muted @endif">{{ $rl['label'] }}</div>
-                                <div class="dc-lane-body wc-lane-body" style="height: var(--canvas-h)"
-                                     data-lane-id="{{ $rl['id'] ?: '' }}"
-                                     data-date="{{ $dayDate->toDateString() }}">
-                                    {{-- Líneas de hora de fondo --}}
-                                    @for ($m = $startMin; $m <= $endMin; $m += 60)
-                                        <div class="dc-grid-line" style="top: {{ ($m - $startMin) * $pxPerMin }}px"></div>
-                                    @endfor
-
-                                    {{-- Clases de este día/carril --}}
-                                    @foreach (($byDay[$iso][$rl['id']] ?? []) as $s)
-                                        @php
-                                            $mins = $s->starts_at->hour * 60 + $s->starts_at->minute;
-                                            $top  = ($mins - $startMin) * $pxPerMin;
-                                            $h    = max(22, $s->duration_min * $pxPerMin);
-                                            $color = $s->program?->color ?? 'teal';
-                                            $subbed = $s->actual_instructor_id
-                                                   && $s->actual_instructor_id !== $s->scheduled_instructor_id;
-                                        @endphp
-                                        <div class="dc-event wc-event chip-{{ $color }}"
-                                             style="top: {{ $top }}px; height: {{ $h }}px"
-                                             data-session-id="{{ $s->id }}"
-                                             data-duration="{{ $s->duration_min }}"
-                                             data-starts="{{ $s->starts_at->format('Y-m-d\TH:i') }}"
-                                             data-lane="{{ $s->lane_id }}"
-                                             data-instructor="{{ $s->scheduled_instructor_id }}"
-                                             title="{{ $s->starts_at->format('H:i') }} · {{ $s->program?->name }} · {{ $s->actualInstructor?->name ?? '—' }} · {{ $s->members->count() }} alumnos">
-                                            <div class="dc-event-time mono">{{ $s->starts_at->format('H:i') }}</div>
-                                            <div class="dc-event-title">{{ $s->program?->name ?? 'Clase' }}</div>
-                                            <div class="wc-event-hover">
-                                                {{ $s->actualInstructor?->name ?? '—' }}
-                                                @if ($subbed)<span class="badge-role">supl.</span>@endif
-                                                · <i class="fa-solid fa-users"></i> {{ $s->members->count() }}
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            @endforeach
         </div>
 
         <p class="text-muted small mt-2">
             Arrastra una clase a otro día, carril u hora (se ajusta cada 10 min).
-            La duración la fija el programa. Si el carril queda ocupado, verás un
-            aviso pero se permite. Toca el encabezado de un día para verlo en detalle.
+            La duración la fija el programa. Toca el encabezado de un día para verlo en detalle.
         </p>
     @endunless
     @include('schedule.partials.sessions-payload')

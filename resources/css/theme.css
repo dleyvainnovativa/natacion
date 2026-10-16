@@ -1061,3 +1061,173 @@ code, kbd, .mono { font-family: var(--font-mono); }
 }
 .slot-chip .slot-count.is-full { color: #c0392b; }
 .slot-chip.is-checked .slot-day { color: var(--brand-teal-600); }
+
+/* ==================================================================
+ * FIXES v3 (slice 4A) — enlaces, botones, tablas en tema oscuro
+ * ================================================================== */
+
+/* #4 Enlaces de contenido con color de marca (no botones ni nav). :where()
+   tiene especificidad 0, así que cualquier clase real lo sobreescribe. */
+:where(a):not(.btn)          { color: var(--brand-teal-600); text-underline-offset: 2px; }
+:where(a):not(.btn):hover    { color: var(--brand-teal); }
+
+/* #5 Botones: definir TODAS las variables --bs-btn-* para que los estados
+   :hover/:active/:focus de Bootstrap no "blanqueen" el fondo ni oculten el texto. */
+.btn-brand {
+    --bs-btn-color: #fff;            --bs-btn-bg: var(--brand-teal);        --bs-btn-border-color: var(--brand-teal);
+    --bs-btn-hover-color: #fff;      --bs-btn-hover-bg: var(--brand-teal-600);  --bs-btn-hover-border-color: var(--brand-teal-600);
+    --bs-btn-active-color: #fff;     --bs-btn-active-bg: var(--brand-teal-600); --bs-btn-active-border-color: var(--brand-teal-600);
+    --bs-btn-disabled-color: #fff;   --bs-btn-disabled-bg: var(--brand-teal);   --bs-btn-disabled-border-color: var(--brand-teal);
+    --bs-btn-focus-shadow-rgb: 73,165,178;
+    background: var(--brand-grad); border: 0; color: #fff; font-weight: 600;
+}
+.btn-brand:hover, .btn-brand:focus-visible, .btn-brand:active, .btn-brand.active, .btn-brand.show {
+    background: var(--brand-grad); filter: brightness(1.06); color: #fff;
+}
+
+.btn-outline-secondary {
+    --bs-btn-color: var(--text-muted);      --bs-btn-bg: transparent;            --bs-btn-border-color: var(--border);
+    --bs-btn-hover-color: var(--text);      --bs-btn-hover-bg: var(--surface-2); --bs-btn-hover-border-color: var(--brand-teal);
+    --bs-btn-active-color: var(--text);     --bs-btn-active-bg: var(--surface-2); --bs-btn-active-border-color: var(--brand-teal);
+    --bs-btn-disabled-color: var(--text-muted); --bs-btn-disabled-bg: transparent; --bs-btn-disabled-border-color: var(--border);
+    --bs-btn-focus-shadow-rgb: 73,165,178;
+}
+.btn-soft {
+    --bs-btn-color: var(--brand-teal-600);  --bs-btn-bg: var(--brand-teal-050);  --bs-btn-border-color: transparent;
+    --bs-btn-hover-color: var(--brand-teal-600); --bs-btn-hover-bg: var(--brand-teal-050); --bs-btn-hover-border-color: var(--brand-teal);
+    --bs-btn-active-color: var(--brand-teal-600); --bs-btn-active-bg: var(--brand-teal-050); --bs-btn-active-border-color: var(--brand-teal);
+    --bs-btn-focus-shadow-rgb: 73,165,178;
+    font-weight: 600;
+}
+
+/* #6 Tablas con tokens del tema (antes usaban blanco de Bootstrap) */
+.table {
+    --bs-table-color: var(--text);
+    --bs-table-bg: transparent;
+    --bs-table-border-color: var(--border);
+    --bs-table-striped-color: var(--text);
+    --bs-table-striped-bg: var(--surface-2);
+    --bs-table-hover-color: var(--text);
+    --bs-table-hover-bg: var(--surface-2);
+    --bs-table-active-color: var(--text);
+    --bs-table-active-bg: var(--surface-2);
+    color: var(--text);
+    border-color: var(--border);
+}
+.table > :not(caption) > * > * { background-color: transparent; color: var(--text); }
+
+/* ==================================================================
+ * CALENDARIO v3 — rejilla reconstruida (slice 4A)
+ * Un solo contenedor con scroll. Cabecera pegajosa arriba (una sola barra),
+ * columna de horas pegajosa a la izquierda, columnas flexibles a lo ancho.
+ * Hooks que el JS usa (.dc-lane-body, .dc-event) se conservan.
+ *   --gw   ancho del gutter de horas
+ *   --cm   ancho mínimo de columna (debajo de esto, scroll horizontal)
+ *   --cols número de columnas (días × carriles)
+ * ================================================================== */
+.cal {
+    --gw: 56px;
+    --cm: 118px;
+    display: block;   /* anula el display:flex heredado de .week-canvas/.day-canvas */
+    position: relative;
+    overflow: auto;
+    max-height: calc(100vh - 230px);
+    padding: 0;
+}
+.cal-head, .cal-body {
+    display: grid;
+    grid-template-columns: var(--gw) repeat(var(--cols), minmax(var(--cm), 1fr));
+    min-width: max-content;          /* permite scroll-x cuando no caben */
+}
+.cal-head {
+    position: sticky; top: 0; z-index: 30;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    grid-template-rows: 2.2rem 1.7rem;   /* fila de día + fila de carril */
+    align-content: start;                /* sin esto, grid estira las filas */
+}
+.cal--day .cal-head { grid-template-rows: 2rem; }   /* vista de día: una sola fila */
+.cal-corner {
+    grid-column: 1; grid-row: 1 / span 2;
+    position: sticky; left: 0; z-index: 5;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+}
+.cal-dayhead {
+    grid-row: 1;
+    display: flex; align-items: center; justify-content: center; gap: .4rem;
+    padding: .4rem .5rem;
+    background: var(--surface-2);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    font-size: .85rem; text-decoration: none; color: var(--text);
+}
+.cal-dayhead:hover { background: var(--brand-teal-050); color: var(--brand-teal); }
+.cal-dayhead .cd-day  { font-weight: 700; }
+.cal-dayhead .cd-date { color: var(--text-muted); font-size: .76rem; }
+.cal-dayhead.is-today { background: var(--brand-teal-050); color: var(--brand-teal); }
+.cal-lanehead {
+    grid-row: 2;
+    display: flex; align-items: center; justify-content: center;
+    padding: .25rem .4rem;
+    font-size: .72rem; font-weight: 600; color: var(--text-muted);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cal-daysep { box-shadow: inset -2px 0 0 var(--border); }   /* separador grueso entre días */
+
+.cal-body { position: relative; }
+.cal-gutter {
+    grid-column: 1;
+    position: sticky; left: 0; z-index: 10;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+}
+.cal-col {
+    position: relative;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    min-width: 0;
+}
+.cal-col.cal-daysep { box-shadow: inset -2px 0 0 var(--border); }
+
+/* Horas en el gutter */
+.cal-gutter .dc-hour-line { position: absolute; left: 0; right: 0; }
+.cal-gutter .dc-hour-label {
+    position: absolute; top: -7px; right: 6px;
+    font-size: .7rem; color: var(--text-muted); font-family: var(--font-mono);
+}
+
+/* líneas de hora de fondo + carril caliente (drag) — reusa .dc-grid-line/.dc-lane-hot */
+.cal-col.dc-lane-hot { background: var(--brand-teal-050); }
+
+/* ---- Bloque de clase con lista de alumnos ---- */
+.cal .dc-event {
+    position: absolute; left: 3px; right: 3px;
+    border-radius: 7px; padding: .22rem .4rem;
+    overflow: hidden; cursor: grab;
+    border: 1px solid rgba(0,0,0,.06);
+    box-shadow: var(--shadow-sm);
+    font-size: .72rem; line-height: 1.18;
+    user-select: none; touch-action: none; z-index: 2;
+    display: flex; flex-direction: column; gap: 1px;
+}
+.cal .dc-event:hover { box-shadow: var(--shadow); z-index: 6; }
+.dc-ev-top { display: flex; justify-content: space-between; align-items: baseline; }
+.dc-event-time { font-weight: 700; font-size: .7rem; opacity: .85; }
+.dc-ev-count {
+    font-family: var(--font-mono); font-size: .66rem; font-weight: 700;
+    padding: 0 .3rem; border-radius: 5px; background: rgba(255,255,255,.45);
+}
+.dc-ev-count.is-full { color: #c0392b; }
+[data-theme="dark"] .dc-ev-count { background: rgba(0,0,0,.25); }
+.dc-event-title { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dc-ev-inst { font-size: .68rem; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dc-ev-members { list-style: none; margin: 1px 0 0; padding: 0; min-height: 0; }
+.dc-ev-members li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .92; }
+.dc-ev-members li.more { opacity: .7; font-weight: 600; }
+
+@media (max-width: 767.98px) {
+    .cal { --cm: 104px; max-height: calc(100vh - 200px); }
+}

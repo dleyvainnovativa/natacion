@@ -113,7 +113,7 @@ class SlotController extends Controller
         ]);
     }
 
-    public function updateRoster(Request $request, ScheduleSlot $slot)
+    public function updateRoster(Request $request, ScheduleSlot $slot, \App\Services\EnrollmentService $enroller)
     {
         $this->authorize('move-classes');
 
@@ -122,10 +122,12 @@ class SlotController extends Controller
             'member_ids.*' => ['integer', 'exists:members,id'],
         ]);
 
-        $slot->members()->sync($validated['member_ids'] ?? []);
+        // Aplica al roster recurrente Y a las sesiones de hoy en adelante ya
+        // generadas (antes solo se reflejaba al regenerar / el mes siguiente).
+        $enroller->syncSlotRoster($slot, $validated['member_ids'] ?? []);
 
         return redirect()->route('schedule.template', ['month' => $slot->template?->key_month])
-            ->with('ok', 'Roster actualizado. Las próximas sesiones lo heredarán.');
+            ->with('ok', 'Roster actualizado. Se aplicó a esta semana y las próximas.');
     }
 
     /** Avisos de conflicto para el slot en la semana actual. */
