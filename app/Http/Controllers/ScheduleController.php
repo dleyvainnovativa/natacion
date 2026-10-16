@@ -25,6 +25,19 @@ class ScheduleController extends Controller
 
         $weekStart = $reference->copy()->startOfWeek(Carbon::MONDAY);
 
+        // Patrón de días a mostrar (petición del cliente):
+        //   lmv    → Lunes/Miércoles/Viernes (programas de 3 días)
+        //   mj     → Martes/Jueves          (programas de 2 días)
+        //   semana → Lunes a Viernes (sin fin de semana)
+        $pattern = in_array($request->query('pattern'), ['lmv', 'mj'], true)
+            ? $request->query('pattern')
+            : 'semana';
+        $visibleDays = match ($pattern) {
+            'lmv'   => [1, 3, 5],
+            'mj'    => [2, 4],
+            default => [1, 2, 3, 4, 5],
+        };
+
         $this->ensureWeekGenerated($reference, $generator);
 
         $sessions = $this->filteredSessions($request)
@@ -69,7 +82,8 @@ class ScheduleController extends Controller
             'endMin'        => $endMin,
             'prevWeek'      => $weekStart->copy()->subWeek()->toDateString(),
             'nextWeek'      => $weekStart->copy()->addWeek()->toDateString(),
-            'weekdays'      => $this->weekdayLabels(),
+            'weekdays'      => collect($this->weekdayLabels())->only($visibleDays)->all(),
+            'pattern'       => $pattern,
             'instructors'   => Instructor::where('active', true)->orderBy('name')->get(),
             'programs'      => Program::where('active', true)->orderBy('name')->get(),
             'allLanes'      => Lane::orderBy('position')->get(), // para el filtro

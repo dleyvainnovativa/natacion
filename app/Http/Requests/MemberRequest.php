@@ -31,6 +31,10 @@ class MemberRequest extends FormRequest
             'status'             => ['required', 'string', 'max:30'],
             'fee'                => ['nullable', 'numeric', 'min:0'],
             'notes'              => ['nullable', 'string', 'max:2000'],
+
+            // Inscripción opcional a clases al registrar (ver EnrollmentService).
+            'slot_ids'           => ['nullable', 'array'],
+            'slot_ids.*'         => ['integer', 'exists:schedule_slots,id'],
         ];
     }
 

@@ -69,6 +69,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/socios/importar', [MemberImportController::class, 'show'])->name('members.import.show');
     Route::post('/socios/importar', [MemberImportController::class, 'store'])->name('members.import.store');
 
+    // Inscribir a clases (socio existente). Antes del resource para no chocar
+    // con /socios/{member}. Mismos roles que la gestión de socios.
+    Route::middleware('role:admin,coordinator,receptionist')->group(function () {
+        Route::get('/socios/{member}/inscribir', [MemberController::class, 'enrollShow'])->name('members.enroll.show');
+        Route::post('/socios/{member}/inscribir', [MemberController::class, 'enrollStore'])->name('members.enroll.store');
+    });
+
     Route::resource('socios', MemberController::class)
         ->parameters(['socios' => 'member'])
         ->names('members')

@@ -69,10 +69,12 @@
 
             <div class="col-md-6">
                 <label class="form-label small">Tipo de socio</label>
-                <select name="membership_type_id" class="form-select">
+                <select name="membership_type_id" id="membership_type_id" class="form-select">
                     <option value="">— Sin asignar —</option>
                     @foreach ($types as $type)
                         <option value="{{ $type->id }}"
+                            data-program="{{ $type->program_id }}"
+                            data-days="{{ $type->days_per_week }}"
                             @selected(old('membership_type_id', $member->membership_type_id) == $type->id)>
                             {{ $type->raw_label }}
                             @if ($type->days_per_week) ({{ $type->days_per_week }} días) @endif
@@ -91,6 +93,15 @@
                 <textarea name="notes" class="form-control" rows="2">{{ old('notes', $member->notes) }}</textarea>
             </div>
         </div>
+
+        @unless ($member->exists)
+            <hr style="border-color:var(--border);margin:1.5rem 0 1rem">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
+                <h2 class="h6 mb-0"><i class="fa-regular fa-calendar-plus me-1" style="color:var(--brand-teal)"></i> Inscribir a clases <span class="text-muted fw-normal">(opcional)</span></h2>
+            </div>
+            <p id="slot-picker-hint" class="text-muted small">Elige un tipo de socio para ver y sugerir sus clases.</p>
+            @include('members.partials.slot-picker', ['slots' => $slots, 'selected' => [], 'pickerMode' => 'create'])
+        @endunless
 
         <div class="d-flex gap-2 mt-4">
             <button class="btn btn-brand">{{ $member->exists ? 'Guardar cambios' : 'Registrar socio' }}</button>

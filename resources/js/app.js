@@ -668,6 +668,121 @@ function buildActionSheet(title, sub, actions, opts = {}) {
     document.addEventListener('keydown', escCloseSheet);
 }
 
+/* ==================================================================
+ * POPOVER anclado (reemplaza la hoja de acciones inferior).
+ * Se abre junto a la clase/slot clicado, muestra el roster (nombres) y las
+ * acciones. Un popover a la vez; cierra con click afuera, Esc o scroll.
+ * ================================================================== */
+let popoverEl = null;
+
+function escClosePopover(e) { if (e.key === 'Escape') closePopover(); }
+
+function outsideClosePopover(e) {
+    if (popoverEl && !popoverEl.contains(e.target)) closePopover();
+}
+
+function closePopover() {
+    if (!popoverEl) return;
+    document.removeEventListener('keydown', escClosePopover);
+    document.removeEventListener('click', outsideClosePopover, true);
+    window.removeEventListener('scroll', closePopover, true);
+    window.removeEventListener('resize', closePopover);
+    const el = popoverEl;
+    popoverEl = null;
+    el.classList.remove('is-open');
+    setTimeout(() => el.remove(), 140);
+}
+
+/** Coloca el popover junto al ancla, con volteo y recorte al viewport. */
+function placePopover(pop, anchor) {
+    const a = anchor.getBoundingClientRect();
+    const pw = pop.offsetWidth;
+    const ph = pop.offsetHeight;
+    const gap = 8;
+
+    let left = a.right + gap;                       // preferimos a la derecha
+    if (left + pw > window.innerWidth - 8) left = a.left - gap - pw; // si no cabe, a la izquierda
+    if (left < 8) left = Math.max(8, Math.min(a.left, window.innerWidth - pw - 8));
+
+    let top = a.top;
+    if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
+    if (top < 8) top = 8;
+
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+}
+
+/**
+ * Construye y muestra el popover.
+ *   actions: [{icon,label,fn,danger?,disabled?}]
+ *   opts.roster: lista [{socio,name}] que se lista arriba de las acciones.
+ */
+function buildPopover(anchor, title, sub, actions, opts = {}) {
+    closePopover();
+
+    const pop = document.createElement('div');
+    pop.className = 'sf-pop';
+
+    const head = document.createElement('div');
+    head.className = 'sf-pop-head';
+    const h = document.createElement('div'); h.className = 'sf-pop-title'; h.textContent = title || '';
+    const s = document.createElement('div'); s.className = 'sf-pop-sub mono'; s.textContent = sub || '';
+    head.appendChild(h); head.appendChild(s);
+    pop.appendChild(head);
+
+    if (opts.roster) {
+        const roster = opts.roster;
+        const rh = document.createElement('div');
+        rh.className = 'sf-pop-roster-head';
+        rh.innerHTML = `<i class="fa-solid fa-users"></i> Alumnos (${roster.length})`;
+        pop.appendChild(rh);
+
+        const list = document.createElement('div');
+        list.className = 'sf-pop-roster';
+        if (!roster.length) {
+            list.innerHTML = `<div class="sf-pop-empty">Esta clase no tiene alumnos.</div>`;
+        } else {
+            roster.forEach((m) => {
+                const row = document.createElement('div');
+                row.className = 'sf-pop-row';
+                const num = document.createElement('span'); num.className = 'sf-pop-num mono';
+                num.textContent = m.socio ? `#${m.socio}` : '';
+                const nm = document.createElement('span'); nm.className = 'sf-pop-name';
+                nm.textContent = m.name || '—';
+                row.appendChild(num); row.appendChild(nm);
+                list.appendChild(row);
+            });
+        }
+        pop.appendChild(list);
+    }
+
+    const acts = actions && actions.length ? actions
+        : [{ icon: 'fa-circle-info', label: 'Sin acciones disponibles', disabled: true }];
+    const ac = document.createElement('div');
+    ac.className = 'sf-pop-actions';
+    acts.forEach((a) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sf-pop-item' + (a.danger ? ' is-danger' : '') + (a.disabled ? ' is-disabled' : '');
+        btn.innerHTML = `<i class="fa-solid ${a.icon}"></i> <span></span>`;
+        btn.querySelector('span').textContent = a.label;
+        if (!a.disabled && a.fn) btn.addEventListener('click', a.fn);
+        ac.appendChild(btn);
+    });
+    pop.appendChild(ac);
+
+    document.body.appendChild(pop);
+    popoverEl = pop;
+    placePopover(pop, anchor);
+    requestAnimationFrame(() => pop.classList.add('is-open'));
+
+    // Diferir el listener de "click afuera" para no cerrarlo con el click que lo abrió.
+    setTimeout(() => document.addEventListener('click', outsideClosePopover, true), 0);
+    document.addEventListener('keydown', escClosePopover);
+    window.addEventListener('scroll', closePopover, true);
+    window.addEventListener('resize', closePopover);
+}
+
 function openSessionActions(cardEl) {
     const title = cardEl.querySelector('.dc-event-title')?.textContent?.trim() || 'Clase';
     const time  = cardEl.querySelector('.dc-event-time')?.textContent?.trim() || '';
@@ -679,14 +794,14 @@ function openSessionActions(cardEl) {
 
     const actions = [];
     if (canMove) {
-        actions.push({ icon: 'fa-arrows-up-down-left-right', label: 'Mover clase (fecha, carril, hora)', fn: () => { closeSessionActions(); SF.openMove(cardEl); } });
-        actions.push({ icon: 'fa-user-pen', label: 'Cambiar instructor', fn: () => { closeSessionActions(); SF.openMove(cardEl); setTimeout(() => document.getElementById('move-instructor')?.focus(), 300); } });
+        actions.push({ icon: 'fa-arrows-up-down-left-right', label: 'Mover clase (fecha, carril, hora)', fn: () => { closePopover(); SF.openMove(cardEl); } });
+        actions.push({ icon: 'fa-user-pen', label: 'Cambiar instructor', fn: () => { closePopover(); SF.openMove(cardEl); setTimeout(() => document.getElementById('move-instructor')?.focus(), 300); } });
     }
     if (canMoveMember) {
-        actions.push({ icon: 'fa-user-group', label: 'Mover un socio de esta clase', fn: () => { closeSessionActions(); SF.openMoveMember(sessionId); } });
+        actions.push({ icon: 'fa-user-group', label: 'Mover un socio de esta clase', fn: () => { closePopover(); SF.openMoveMember(sessionId); } });
     }
     if (canMove) {
-        actions.push({ icon: 'fa-ban', label: 'Cancelar clase', danger: true, fn: () => { closeSessionActions(); cancelSessionById(sessionId); } });
+        actions.push({ icon: 'fa-ban', label: 'Cancelar clase', danger: true, fn: () => { closePopover(); cancelSessionById(sessionId); } });
     }
     if (!actions.length) {
         actions.push({ icon: 'fa-circle-info', label: 'No tienes permisos para editar clases', disabled: true });
@@ -696,7 +811,7 @@ function openSessionActions(cardEl) {
     const sess = (window.SF_SESSIONS || []).find((s) => String(s.id) === String(sessionId));
     const roster = sess ? sess.members : [];
 
-    buildActionSheet(title, time, actions, { roster });
+    buildPopover(cardEl, title, time, actions, { roster });
 }
 
 /* ---- Plantilla: hoja de acciones para un slot ---- */
@@ -707,12 +822,12 @@ function openSlotActions(cardEl) {
     const sub = `${d.start || ''} · ${d.duration || ''}′`;
 
     const actions = [
-        { icon: 'fa-pen', label: 'Editar clase (programa, día, hora…)', fn: () => { closeSessionActions(); openSlotEdit(d); } },
-        { icon: 'fa-user-group', label: 'Editar roster', fn: () => { closeSessionActions(); window.location.href = d.rosterUrl; } },
-        { icon: 'fa-trash', label: 'Quitar de la plantilla', danger: true, fn: () => { closeSessionActions(); deleteSlot(d.destroyUrl); } },
+        { icon: 'fa-pen', label: 'Editar clase (programa, día, hora…)', fn: () => { closePopover(); openSlotEdit(d); } },
+        { icon: 'fa-user-group', label: 'Editar roster', fn: () => { closePopover(); window.location.href = d.rosterUrl; } },
+        { icon: 'fa-trash', label: 'Quitar de la plantilla', danger: true, fn: () => { closePopover(); deleteSlot(d.destroyUrl); } },
     ];
 
-    buildActionSheet(title, sub, actions);
+    buildPopover(cardEl, title, sub, actions);
 }
 
 /** Prefill del modal en modo edición (PUT al slot). */
@@ -855,7 +970,76 @@ async function commitMove(sessionId, startsAt, laneId) {
 }
 
 document.addEventListener('DOMContentLoaded', initDayCanvas);
-Object.assign(window.SF, { initDayCanvas, openSessionActions, closeSessionActions, openSlotActions, openSlotEdit, openSlotAdd, toggleAttendanceCell });
+Object.assign(window.SF, { initDayCanvas, openSessionActions, closeSessionActions, closePopover, openSlotActions, openSlotEdit, openSlotAdd, toggleAttendanceCell });
+
+
+/* ==================================================================
+ * SELECTOR DE CLASES (inscripción de socios)
+ * En el alta de socio: al elegir tipo de socio muestra solo las clases de su
+ * programa y pre-marca una sugerencia según los días/semana del tipo.
+ * ================================================================== */
+
+// Sugerencia de días (ISO) según días/semana del tipo de socio.
+const ENROLL_PATTERN = { 1: [3], 2: [2, 4], 3: [1, 3, 5], 4: [1, 2, 3, 4], 5: [1, 2, 3, 4, 5] };
+
+function initSlotPicker() {
+    const picker = document.querySelector('.slot-picker');
+    if (!picker) return;
+
+    // Estado visual de cada chip al marcar/desmarcar.
+    picker.addEventListener('change', (e) => {
+        const cb = e.target.closest('input[type="checkbox"]');
+        if (cb) cb.closest('.slot-chip')?.classList.toggle('is-checked', cb.checked);
+    });
+
+    if (picker.dataset.mode !== 'create') return;
+
+    const sel = document.getElementById('membership_type_id');
+    if (!sel) return;
+    sel.addEventListener('change', () => applyTypeToPicker(picker, sel));
+    if (sel.value) applyTypeToPicker(picker, sel); // tipo ya elegido (old input)
+}
+
+function applyTypeToPicker(picker, sel) {
+    const opt  = sel.options[sel.selectedIndex];
+    const prog = opt?.dataset.program || '';
+    const days = parseInt(opt?.dataset.days || '0', 10);
+    const hint = document.getElementById('slot-picker-hint');
+
+    let shown = null;
+    picker.querySelectorAll('.slot-group').forEach((g) => {
+        const match = prog && g.dataset.programId === prog;
+        g.classList.toggle('d-none', !match);
+        if (match) shown = g;
+        // Al cambiar de tipo, limpiar marcas de todos los grupos.
+        g.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+            cb.checked = false;
+            cb.closest('.slot-chip')?.classList.remove('is-checked');
+        });
+    });
+
+    if (!prog) { if (hint) hint.textContent = 'Elige un tipo de socio para ver y sugerir sus clases.'; return; }
+    if (!shown) { if (hint) hint.textContent = 'No hay clases de ese programa en la plantilla del mes.'; return; }
+
+    // Pre-marcar la clase más temprana de cada día sugerido.
+    const pattern = ENROLL_PATTERN[days] || [];
+    pattern.forEach((wd) => {
+        const chips = [...shown.querySelectorAll('.slot-chip')]
+            .filter((c) => parseInt(c.dataset.weekday, 10) === wd)
+            .sort((a, b) => (a.dataset.start > b.dataset.start ? 1 : -1));
+        const first = chips[0];
+        if (first) { first.querySelector('input').checked = true; first.classList.add('is-checked'); }
+    });
+
+    if (hint) {
+        hint.textContent = days
+            ? `Sugerencia para ${days} día(s)/semana. Ajusta las que haga falta.`
+            : 'Marca las clases del socio.';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initSlotPicker);
+Object.assign(window.SF, { initSlotPicker });
 
 
 Object.assign(window.SF, { openMoveMember, submitMoveMember, filterRoster });

@@ -94,10 +94,16 @@
                                 {{ $member->next_billing_date?->format('d/m/Y') ?? '—' }}
                             </td>
                             <td class="text-end pe-3">
-                                <a href="{{ route('members.edit', $member) }}"
-                                   class="btn btn-sm btn-outline-secondary">
-                                    <i class="fa-solid fa-pen"></i>
-                                </a>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ route('members.enroll.show', $member) }}"
+                                       class="btn btn-soft" title="Inscribir a clases">
+                                        <i class="fa-regular fa-calendar-plus"></i>
+                                    </a>
+                                    <a href="{{ route('members.edit', $member) }}"
+                                       class="btn btn-outline-secondary" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     @empty

@@ -52,7 +52,12 @@
 
         <div class="col-md-6">
             <div class="app-card p-4 h-100">
-                <h2 class="h6 text-muted mb-3">Clases asignadas</h2>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h6 text-muted mb-0">Clases asignadas</h2>
+                    <a href="{{ route('members.enroll.show', $member) }}" class="btn btn-sm btn-brand">
+                        <i class="fa-regular fa-calendar-plus me-1"></i> Inscribir a clases
+                    </a>
+                </div>
 
                 @php
                     $entitled = $member->entitledDaysPerWeek();

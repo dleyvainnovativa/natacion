@@ -7,6 +7,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Swim Fitness')</title>
+    <link rel="icon" type="image/png" href="{{ asset('img/favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('img/favicon.png') }}">
 
     {{-- Guardrail anti-FOUC: limita el tamaño de los iconos ANTES de que
          cargue la webfont, para que no aparezca un icono gigante. --}}
@@ -34,8 +36,8 @@
         </button>
 
         <a href="{{ route('schedule.index') }}" class="app-topbar-brand">
-            <i class="fa-solid fa-water" style="color: var(--brand-teal)"></i>
-            <span>Swim Fitness</span>
+            <img src="{{ asset('img/logo-mark.png') }}" alt="Swim Fitness" class="topbar-mark">
+            <span class="brand-word">swim<span class="bw-fit">fitness</span></span>
         </a>
 
         <div class="app-topbar-spacer"></div>
@@ -62,6 +64,9 @@
     {{-- ===== Cuerpo: sidebar (desktop) + main ===== --}}
     <div class="app-shell">
         <aside class="app-sidebar">
+            <a href="{{ route('schedule.index') }}" class="sidebar-brand">
+                <img src="{{ asset('img/logo-swimfit.png') }}" alt="Swim Fitness">
+            </a>
             @include('partials.nav-links')
         </aside>
 
@@ -74,8 +79,8 @@
     <div class="offcanvas offcanvas-start app-offcanvas" tabindex="-1" id="navOffcanvas"
          aria-labelledby="navOffcanvasLabel">
         <div class="offcanvas-header">
-            <span class="d-flex align-items-center gap-2 fw-bold" id="navOffcanvasLabel">
-                <i class="fa-solid fa-water" style="color: var(--brand-teal)"></i> Swim Fitness
+            <span class="d-flex align-items-center" id="navOffcanvasLabel">
+                <img src="{{ asset('img/logo-swimfit.png') }}" alt="Swim Fitness">
             </span>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
         </div>

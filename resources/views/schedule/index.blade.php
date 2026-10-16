@@ -16,11 +16,24 @@
                 <a href="{{ route('schedule.day', $filters) }}" class="btn btn-outline-secondary">Día</a>
                 <a href="{{ route('schedule.index', $filters) }}" class="btn btn-brand">Semana</a>
             </div>
+
+            {{-- Patrón de días: L-M-V / M-J / toda la semana (petición del cliente) --}}
+            @php $patBase = array_merge($filters, ['week' => request('week')]); @endphp
+            <div class="btn-group btn-group-sm">
+                <a href="{{ route('schedule.index', array_merge($patBase, ['pattern' => 'lmv'])) }}"
+                   class="btn {{ $pattern === 'lmv' ? 'btn-brand' : 'btn-outline-secondary' }}">L·M·V</a>
+                <a href="{{ route('schedule.index', array_merge($patBase, ['pattern' => 'mj'])) }}"
+                   class="btn {{ $pattern === 'mj' ? 'btn-brand' : 'btn-outline-secondary' }}">M·J</a>
+                <a href="{{ route('schedule.index', array_merge($patBase, ['pattern' => 'semana'])) }}"
+                   class="btn {{ $pattern === 'semana' ? 'btn-brand' : 'btn-outline-secondary' }}">Semana</a>
+            </div>
+
             <div class="btn-group">
-                <a href="{{ route('schedule.index', array_merge($filters, ['week' => $prevWeek])) }}"
+                <a href="{{ route('schedule.index', array_merge($filters, ['pattern' => $pattern, 'week' => $prevWeek])) }}"
                    class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-chevron-left"></i></a>
-                <a href="{{ route('schedule.index', $filters) }}" class="btn btn-outline-secondary btn-sm">Hoy</a>
-                <a href="{{ route('schedule.index', array_merge($filters, ['week' => $nextWeek])) }}"
+                <a href="{{ route('schedule.index', array_merge($filters, ['pattern' => $pattern])) }}"
+                   class="btn btn-outline-secondary btn-sm">Hoy</a>
+                <a href="{{ route('schedule.index', array_merge($filters, ['pattern' => $pattern, 'week' => $nextWeek])) }}"
                    class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-chevron-right"></i></a>
             </div>
             @can('move-classes')
@@ -38,6 +51,7 @@
     {{-- Barra de filtros --}}
     <form method="GET" class="filter-bar app-card mb-3">
         <input type="hidden" name="week" value="{{ request('week') }}">
+        <input type="hidden" name="pattern" value="{{ $pattern }}">
         <div class="filter-field">
             <label>Instructor</label>
             <select name="instructor" class="form-select form-select-sm" onchange="this.form.submit()">
@@ -66,15 +80,16 @@
             </select>
         </div>
         @if (array_filter($filters))
-            <a href="{{ route('schedule.index', ['week' => request('week')]) }}"
+            <a href="{{ route('schedule.index', ['week' => request('week'), 'pattern' => $pattern]) }}"
                class="btn btn-sm btn-outline-secondary align-self-end">Limpiar</a>
         @endif
     </form>
 
     @php
-        // Escala idéntica a la vista de día. Debe COINCIDIR con --px-per-min
-        // del CSS y PX_PER_MIN del JS.
-        $pxPerMin = 1.2;
+        // Escala idéntica a la vista de día. El JS lee --px-per-min del lienzo,
+        // así que basta cambiarlo aquí. Subido a 1.6 para que quepan instructor
+        // + conteo en cada bloque sin tener que abrir nada.
+        $pxPerMin = 1.6;
         $canvasH  = ($endMin - $startMin) * $pxPerMin;
         // Carriles a pintar por día: los reales + (si aplica) "sin carril" (id 0).
         $renderLanes = $lanes->map(fn ($l) => ['id' => $l->id, 'label' => $l->label])->all();
