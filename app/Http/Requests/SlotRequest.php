@@ -21,6 +21,10 @@ class SlotRequest extends FormRequest
             'weekday'       => ['required', 'integer', 'between:1,7'],
             'start_time'    => ['required', 'date_format:H:i'],
             'duration_min'  => ['nullable', 'integer', 'min:5', 'max:240'],
+
+            // Roster inicial elegido en el modal (opcional).
+            'member_ids'    => ['nullable', 'array'],
+            'member_ids.*'  => ['integer', 'exists:members,id'],
         ];
     }
 

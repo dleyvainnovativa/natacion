@@ -66,6 +66,7 @@
                              data-lane="{{ $slot->lane_id }}"
                              data-instructor="{{ $slot->instructor_id }}"
                              data-duration="{{ $slot->duration_min }}"
+                             data-roster-ids="{{ $slot->members->pluck('id')->implode(',') }}"
                              data-roster-url="{{ route('schedule.slots.roster', $slot) }}"
                              data-update-url="{{ route('schedule.slots.update', $slot) }}"
                              data-destroy-url="{{ route('schedule.slots.destroy', $slot) }}">
@@ -161,6 +162,28 @@
                     <div class="mt-2">
                         <label class="form-label small">Duración (min) — vacío = la del programa</label>
                         <input type="number" name="duration_min" id="slot-duration" class="form-control" min="5" max="240">
+                    </div>
+
+                    {{-- Elegir socios del roster al crear/editar la clase --}}
+                    <div class="mt-3">
+                        <label class="form-label small d-flex justify-content-between">
+                            <span>Socios en la clase</span>
+                            <span class="text-muted" id="slot-roster-count">0</span>
+                        </label>
+                        <input type="text" class="form-control form-control-sm mb-2"
+                               placeholder="Buscar socio…" oninput="SF.filterSlotMembers(this)">
+                        <div id="slot-members" class="slot-member-list">
+                            @foreach ($members as $m)
+                                <label class="roster-item d-flex align-items-center gap-2 py-1 px-2 rounded"
+                                       data-text="{{ mb_strtolower($m->first_name.' '.$m->last_name_1.' '.$m->last_name_2.' '.$m->socio_number) }}">
+                                    <input type="checkbox" name="member_ids[]" value="{{ $m->id }}" class="form-check-input mt-0"
+                                           onchange="SF.updateSlotRosterCount()">
+                                    <span class="mono small text-muted" style="width:52px">{{ $m->socio_number }}</span>
+                                    <span class="small">{{ trim("$m->first_name $m->last_name_1 $m->last_name_2") }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <small class="text-muted">Opcional. También puedes gestionarlo luego con "Roster" o arrastrando socios en el horario.</small>
                     </div>
                 </div>
                 <div class="modal-footer">

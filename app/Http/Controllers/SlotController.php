@@ -14,9 +14,11 @@ use Illuminate\Http\Request;
 
 class SlotController extends Controller
 {
-    public function store(SlotRequest $request, ConflictDetector $detector, SessionGenerator $generator)
+    public function store(SlotRequest $request, ConflictDetector $detector, SessionGenerator $generator, \App\Services\EnrollmentService $enroller)
     {
         $data = $request->validated();
+        $memberIds = $data['member_ids'] ?? [];
+        unset($data['member_ids']);
 
         // Resolver la plantilla del mes indicado (o el actual) y colgar el slot.
         $monthRef = $this->monthRef($data['month'] ?? null);
@@ -33,15 +35,23 @@ class SlotController extends Controller
         // plantilla. Así la clase aparece de inmediato esta semana y siguientes.
         $this->generateSlotSessions($slot, $monthRef, $generator);
 
+        // Roster inicial elegido en el modal: se aplica a la serie y a las
+        // sesiones ya generadas.
+        if ($memberIds) {
+            $enroller->syncSlotRoster($slot, $memberIds);
+        }
+
         return redirect()->route('schedule.template', ['month' => $template->key_month])
             ->with('ok', 'Clase agregada a la plantilla de ' . $template->display_label . '.')
             ->with('warnings', $this->slotWarnings($slot, $detector));
     }
 
-    public function update(SlotRequest $request, ScheduleSlot $slot, ConflictDetector $detector, SessionGenerator $generator)
+    public function update(SlotRequest $request, ScheduleSlot $slot, ConflictDetector $detector, SessionGenerator $generator, \App\Services\EnrollmentService $enroller)
     {
         $data = $request->validated();
-        unset($data['month']);
+        $hasMembers = $request->has('member_ids');
+        $memberIds  = $data['member_ids'] ?? [];
+        unset($data['member_ids'], $data['month']);
         $data['duration_min'] ??= Program::find($data['program_id'])?->duration_min ?? $slot->duration_min;
 
         $slot->update($data);
@@ -52,6 +62,11 @@ class SlotController extends Controller
             ? Carbon::create($slot->template->year, $slot->template->month, 1)
             : Carbon::now();
         $this->generateSlotSessions($slot, $monthRef, $generator);
+
+        // El modal envía member_ids (precargado con el roster actual): sincroniza.
+        if ($hasMembers) {
+            $enroller->syncSlotRoster($slot, $memberIds);
+        }
 
         return redirect()->route('schedule.template', ['month' => $slot->template?->key_month])
             ->with('ok', 'Clase actualizada.')

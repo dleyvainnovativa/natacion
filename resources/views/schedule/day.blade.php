@@ -82,6 +82,8 @@
         @endif
     </form>
 
+    <div class="cal-layout">
+    <div class="cal-main">
     {{-- LIENZO DEL DÍA (misma rejilla que la semana: cabecera + gutter pegajosos,
          columnas de carril flexibles a lo ancho). --}}
     @php
@@ -133,6 +135,12 @@
         Arrastra una clase a otro carril u hora (se ajusta cada 10 min). La duración
         la fija el programa. Si el carril queda ocupado a esa hora, verás un aviso pero se permite.
     </p>
+    </div>{{-- /.cal-main --}}
+    @can('move-classes')
+        @include('schedule.partials.member-panel')
+    @endcan
+    </div>{{-- /.cal-layout --}}
+
     @include('schedule.partials.sessions-payload')
 
 

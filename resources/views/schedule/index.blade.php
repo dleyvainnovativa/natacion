@@ -98,6 +98,8 @@
         }
     @endphp
 
+    <div class="cal-layout">
+    <div class="cal-main">
     @unless ($hasSessions)
         <div class="app-card p-5 text-center text-muted">
             <i class="fa-regular fa-calendar-xmark fs-1 mb-3 d-block" style="color:var(--brand-teal)"></i>
@@ -166,8 +168,13 @@
             La duración la fija el programa. Toca el encabezado de un día para verlo en detalle.
         </p>
     @endunless
-    @include('schedule.partials.sessions-payload')
+    </div>{{-- /.cal-main --}}
+    @can('move-classes')
+        @include('schedule.partials.member-panel')
+    @endcan
+    </div>{{-- /.cal-layout --}}
 
+    @include('schedule.partials.sessions-payload')
 
     @can('move-classes')
         @include('schedule.partials.move-modal')

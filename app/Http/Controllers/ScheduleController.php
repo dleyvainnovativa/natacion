@@ -7,12 +7,40 @@ use App\Models\Instructor;
 use App\Models\Lane;
 use App\Models\Program;
 use App\Models\ScheduleSlot;
+use App\Models\Member;
 use App\Services\SessionGenerator;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ScheduleController extends Controller
 {
+    /**
+     * Socios para el panel lateral del calendario, con cuántas clases tienen en
+     * la semana de $weekStart (para arrastrarlos a una clase e inscribirlos).
+     */
+    private function panelMembers(Carbon $weekStart): array
+    {
+        $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
+
+        $counts = DB::table('session_members')
+            ->join('class_sessions', 'class_sessions.id', '=', 'session_members.class_session_id')
+            ->whereBetween('class_sessions.starts_at', [$weekStart->copy()->startOfDay(), $weekEnd->copy()->endOfDay()])
+            ->where('class_sessions.status', '!=', 'cancelled')
+            ->select('session_members.member_id', DB::raw('count(*) as c'))
+            ->groupBy('session_members.member_id')
+            ->pluck('c', 'session_members.member_id');
+
+        return Member::orderBy('last_name_1')->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name_1', 'last_name_2', 'socio_number'])
+            ->map(fn ($m) => [
+                'id'    => $m->id,
+                'name'  => trim("$m->first_name $m->last_name_1"),
+                'socio' => $m->socio_number,
+                'count' => (int) ($counts[$m->id] ?? 0),
+            ])->values()->all();
+    }
+
     /**
      * Vista de SEMANA (escaneo): rejilla horas × días. Es la que ya existía;
      * se conserva como vista general. El drag fino vive en la vista de DÍA.
@@ -89,6 +117,7 @@ class ScheduleController extends Controller
             'allLanes'      => Lane::orderBy('position')->get(), // para el filtro
             'filters'       => $request->only(['instructor', 'program', 'lane']),
             'sessionsPayload' => $this->sessionsPayload($sessions),
+            'panelMembers'  => $this->panelMembers($weekStart),
         ]);
     }
 
@@ -141,6 +170,7 @@ class ScheduleController extends Controller
             'programs'    => Program::where('active', true)->orderBy('name')->get(),
             'filters'     => $request->only(['instructor', 'program']),
             'sessionsPayload' => $this->sessionsPayload($sessions),
+            'panelMembers' => $this->panelMembers($date->copy()->startOfWeek(Carbon::MONDAY)),
         ]);
     }
 
@@ -172,6 +202,8 @@ class ScheduleController extends Controller
             'programs'    => Program::where('active', true)->orderBy('name')->get(),
             'instructors' => Instructor::where('active', true)->orderBy('name')->get(),
             'lanes'       => Lane::with('pool')->orderBy('pool_id')->orderBy('position')->get(),
+            'members'     => Member::orderBy('last_name_1')->orderBy('first_name')
+                ->get(['id', 'first_name', 'last_name_1', 'last_name_2', 'socio_number']),
         ]);
     }
 

@@ -847,6 +847,9 @@ function openSlotEdit(d) {
     document.getElementById('slot-instructor').value = d.instructor || '';
     document.getElementById('slot-duration').value   = d.duration || '';
 
+    // Roster: marcar los socios actuales de la clase.
+    setSlotMembers((d.rosterIds || '').split(',').filter(Boolean));
+
     SF.modal.show('slotModal');
 }
 
@@ -863,9 +866,31 @@ function openSlotAdd() {
         // program/weekday/lane/instructor quedan en su primer valor por defecto.
         document.getElementById('slot-lane').value = '';
         document.getElementById('slot-instructor').value = '';
+        setSlotMembers([]); // sin socios por defecto
     }
     SF.modal.show('slotModal');
 }
+
+/* --- Picker de socios dentro del modal de clase --- */
+function setSlotMembers(ids) {
+    const set = new Set((ids || []).map(String));
+    document.querySelectorAll('#slot-members input[type="checkbox"]').forEach((cb) => {
+        cb.checked = set.has(String(cb.value));
+    });
+    updateSlotRosterCount();
+}
+function filterSlotMembers(input) {
+    const term = (input.value || '').trim().toLowerCase();
+    document.querySelectorAll('#slot-members .roster-item').forEach((el) => {
+        el.style.display = (el.getAttribute('data-text') || '').includes(term) ? '' : 'none';
+    });
+}
+function updateSlotRosterCount() {
+    const n = document.querySelectorAll('#slot-members input:checked').length;
+    const el = document.getElementById('slot-roster-count');
+    if (el) el.textContent = n;
+}
+Object.assign(window.SF, { filterSlotMembers, updateSlotRosterCount });
 
 /** Enviar el form oculto de borrado al endpoint del slot. */
 function deleteSlot(destroyUrl) {
@@ -1040,6 +1065,97 @@ function applyTypeToPicker(picker, sel) {
 
 document.addEventListener('DOMContentLoaded', initSlotPicker);
 Object.assign(window.SF, { initSlotPicker });
+
+
+/* ==================================================================
+ * PANEL DE SOCIOS del calendario — filtro + arrastrar a una clase.
+ * Arrastrar un socio (HTML5 drag) y soltarlo sobre una clase (.dc-event) lo
+ * inscribe, preguntando el alcance (serie / solo este día). Usa el endpoint
+ * existente schedule.sessions.add-member.
+ * ================================================================== */
+
+function filterMemberPanel(input) {
+    const term = (input.value || '').trim().toLowerCase();
+    document.querySelectorAll('#mpList .mp-member').forEach((el) => {
+        el.style.display = (el.dataset.text || '').includes(term) ? '' : 'none';
+    });
+}
+
+let mpDropHot = null;
+function mpHighlight(ev) {
+    if (mpDropHot === ev) return;
+    mpClearHighlight();
+    mpDropHot = ev;
+    ev.classList.add('mp-drop-hot');
+}
+function mpClearHighlight() {
+    if (mpDropHot) { mpDropHot.classList.remove('mp-drop-hot'); mpDropHot = null; }
+}
+
+function initMemberDrag() {
+    const chips = document.querySelectorAll('.mp-member[draggable="true"]');
+    const canvas = document.querySelector('.cal');
+    if (!chips.length || !canvas) return;
+
+    let draggingId = null;
+
+    chips.forEach((m) => {
+        m.addEventListener('dragstart', (e) => {
+            draggingId = m.dataset.memberId;
+            e.dataTransfer.setData('text/plain', draggingId);
+            e.dataTransfer.effectAllowed = 'copy';
+            m.classList.add('is-dragging');
+            document.body.classList.add('mp-dragging');
+        });
+        m.addEventListener('dragend', () => {
+            m.classList.remove('is-dragging');
+            document.body.classList.remove('mp-dragging');
+            mpClearHighlight();
+        });
+    });
+
+    canvas.addEventListener('dragover', (e) => {
+        const ev = e.target.closest('.dc-event');
+        if (!ev) { mpClearHighlight(); return; }
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        mpHighlight(ev);
+    });
+    canvas.addEventListener('drop', (e) => {
+        const ev = e.target.closest('.dc-event');
+        mpClearHighlight();
+        if (!ev) return;
+        e.preventDefault();
+        const memberId = e.dataTransfer.getData('text/plain') || draggingId;
+        if (memberId) askEnrollScope(ev, memberId);
+    });
+}
+
+/** Pregunta el alcance (serie / sólo este día) y luego inscribe. */
+function askEnrollScope(ev, memberId) {
+    const sub = (ev.querySelector('.dc-event-title')?.textContent?.trim() || 'Clase')
+        + ' · ' + (ev.querySelector('.dc-event-time')?.textContent?.trim() || '');
+    const sessionId = ev.dataset.sessionId;
+    buildPopover(ev, 'Inscribir socio', sub, [
+        { icon: 'fa-repeat',        label: 'Toda la serie (cada semana)', fn: () => { closePopover(); enrollMemberToSession(sessionId, memberId, 'series'); } },
+        { icon: 'fa-calendar-day',  label: 'Sólo este día',               fn: () => { closePopover(); enrollMemberToSession(sessionId, memberId, 'date'); } },
+    ]);
+}
+
+async function enrollMemberToSession(sessionId, memberId, scope) {
+    try {
+        const res = await SF.http.post(`/horario/sesiones/${sessionId}/socio/agregar`, {
+            member_id: memberId, scope,
+        });
+        SF.toast(res.message || 'Socio inscrito.');
+        setTimeout(() => location.reload(), 650);
+    } catch (e) {
+        SF.toast(e.data?.message || 'No se pudo inscribir al socio.', 'error');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initMemberDrag);
+Object.assign(window.SF, { filterMemberPanel, initMemberDrag });
 
 
 Object.assign(window.SF, { openMoveMember, submitMoveMember, filterRoster });
