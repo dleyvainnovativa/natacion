@@ -148,5 +148,9 @@
         <div id="dc-toast-anchor"></div>
         @include('schedule.partials.move-modal')
         @include('schedule.partials.move-member-modal')
+        @include('schedule.partials.quick-add-modal', [
+            'programs' => $programs, 'instructors' => $instructors,
+            'lanes' => $lanes, 'members' => $panelMembers,
+        ])
     @endcan
 @endsection

@@ -369,13 +369,12 @@ async function submitMoveMember() {
  * Se llama con oninput. Compara contra data-text (o el texto visible).
  */
 function filterRoster(input) {
-    console.log('filterRoster called with input:', input.value);
-    const term = (input.value || '').trim().toLowerCase();
+    const term = sfNorm(input.value).trim();
     const list = input.closest('form')?.querySelector('#roster-list')
               || document.getElementById('roster-list');
     if (!list) return;
     list.querySelectorAll('.roster-item').forEach((el) => {
-        const text = (el.getAttribute('data-text') || el.textContent || '').toLowerCase();
+        const text = sfNorm(el.getAttribute('data-text') || el.textContent);
         if (text.includes(term)) {
             el.classList.remove('d-none');
         } else {
@@ -1075,9 +1074,9 @@ Object.assign(window.SF, { initSlotPicker });
  * ================================================================== */
 
 function filterMemberPanel(input) {
-    const term = (input.value || '').trim().toLowerCase();
+    const term = sfNorm(input.value).trim();
     document.querySelectorAll('#mpList .mp-member').forEach((el) => {
-        el.style.display = (el.dataset.text || '').includes(term) ? '' : 'none';
+        el.style.display = sfNorm(el.dataset.text).includes(term) ? '' : 'none';
     });
 }
 
@@ -1156,6 +1155,91 @@ async function enrollMemberToSession(sessionId, memberId, scope) {
 
 document.addEventListener('DOMContentLoaded', initMemberDrag);
 Object.assign(window.SF, { filterMemberPanel, initMemberDrag });
+
+
+/* ==================================================================
+ * Búsqueda de socios sin distinguir acentos + alta rápida de clase.
+ * ================================================================== */
+
+/** Normaliza: minúsculas y sin acentos ("García" -> "garcia"). */
+const sfNorm = (s) => (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+/** Filtro genérico de una lista de .roster-item (checkboxes de socios). */
+function filterChecklist(input, listSelector) {
+    const term = sfNorm(input.value).trim();
+    document.querySelectorAll(`${listSelector} .roster-item`).forEach((el) => {
+        el.style.display = sfNorm(el.getAttribute('data-text')).includes(term) ? '' : 'none';
+    });
+}
+function updateChecklistCount(listSelector, countSelector) {
+    const n = document.querySelectorAll(`${listSelector} input:checked`).length;
+    const el = document.querySelector(countSelector);
+    if (el) el.textContent = n;
+}
+
+const QA_SNAP = 15; // minutos
+
+function initQuickAdd() {
+    const modalEl = document.getElementById('quickAddModal');
+    const canvas = document.querySelector('.cal');
+    if (!modalEl || !canvas) return;
+
+    const pxPerMin = parseFloat(getComputedStyle(canvas).getPropertyValue('--px-per-min')) || 1.6;
+    const startMin = parseInt(canvas.dataset.startMin, 10);
+
+    canvas.querySelectorAll('.cal-col').forEach((col) => {
+        col.style.cursor = 'copy';
+        col.addEventListener('click', (e) => {
+            if (e.target.closest('.dc-event')) return; // clic sobre una clase: su propio manejador
+            const rect = col.getBoundingClientRect();
+            let min = startMin + (e.clientY - rect.top) / pxPerMin;
+            min = Math.round(min / QA_SNAP) * QA_SNAP;
+            min = Math.max(startMin, min);
+            openQuickAdd(col.dataset.date || '', min, col.dataset.laneId || '');
+        });
+    });
+}
+
+const DOW_ES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+function openQuickAdd(date, minutes, laneId) {
+    const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
+    const mm = String(minutes % 60).padStart(2, '0');
+
+    document.getElementById('qa-date').value = date;
+    document.getElementById('qa-time').value = `${hh}:${mm}`;
+    const laneSel = document.getElementById('qa-lane');
+    if (laneSel) laneSel.value = laneId || '';
+    document.getElementById('qa-instructor').value = '';
+    document.getElementById('qa-scope-weekly').checked = true;
+    document.querySelectorAll('#qa-members input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
+    updateChecklistCount('#qa-members', '#qa-roster-count');
+
+    const ctx = document.getElementById('qa-context');
+    if (ctx) {
+        let label = '';
+        if (date) {
+            const d = new Date(date + 'T00:00:00');
+            const dow = DOW_ES[d.getDay()] || '';
+            label = dow.charAt(0).toUpperCase() + dow.slice(1)
+                + ' ' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+        }
+        const laneTxt = laneSel && laneSel.value
+            ? laneSel.options[laneSel.selectedIndex].textContent.trim()
+            : 'Sin carril';
+        ctx.textContent = `${label} · ${laneTxt} · ${hh}:${mm}`;
+    }
+
+    SF.modal.show('quickAddModal');
+}
+
+document.addEventListener('DOMContentLoaded', initQuickAdd);
+Object.assign(window.SF, {
+    filterChecklist, updateChecklistCount, initQuickAdd, openQuickAdd,
+    // Accent-insensitive para el modal de plantilla (reemplaza las versiones previas).
+    filterSlotMembers: (input) => filterChecklist(input, '#slot-members'),
+    updateSlotRosterCount: () => updateChecklistCount('#slot-members', '#slot-roster-count'),
+});
 
 
 Object.assign(window.SF, { openMoveMember, submitMoveMember, filterRoster });

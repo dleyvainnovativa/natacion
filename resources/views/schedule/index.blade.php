@@ -179,5 +179,9 @@
     @can('move-classes')
         @include('schedule.partials.move-modal')
         @include('schedule.partials.move-member-modal')
+        @include('schedule.partials.quick-add-modal', [
+            'programs' => $programs, 'instructors' => $instructors,
+            'lanes' => $allLanes, 'members' => $panelMembers,
+        ])
     @endcan
 @endsection

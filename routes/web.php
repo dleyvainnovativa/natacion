@@ -7,6 +7,7 @@ use App\Http\Controllers\MemberAttendanceController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MemberImportController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\QuickClassController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\SessionController;
@@ -41,6 +42,9 @@ Route::middleware('auth')->group(function () {
     // Edición del horario: recepción, coordinación, admin.
     Route::middleware('role:admin,coordinator,receptionist')->group(function () {
         Route::get('/horario/plantilla', [ScheduleController::class, 'template'])->name('schedule.template');
+
+        // Alta rápida desde el calendario (clic en un hueco).
+        Route::post('/horario/clase-rapida', [QuickClassController::class, 'store'])->name('schedule.quick-class.store');
 
         Route::post('/horario/slots', [SlotController::class, 'store'])->name('schedule.slots.store');
         Route::put('/horario/slots/{slot}', [SlotController::class, 'update'])->name('schedule.slots.update');
