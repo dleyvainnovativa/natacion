@@ -6,7 +6,9 @@ use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\MemberAttendanceController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MemberImportController;
+use App\Http\Controllers\InstructorController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\QuickClassController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScheduleController;
@@ -140,5 +142,27 @@ Route::middleware('auth')->group(function () {
         Route::put('/mantenimiento/{maintenance}', [MaintenanceController::class, 'update'])->name('maintenance.update');
         Route::patch('/mantenimiento/{maintenance}/toggle', [MaintenanceController::class, 'toggle'])->name('maintenance.toggle');
         Route::delete('/mantenimiento/{maintenance}', [MaintenanceController::class, 'destroy'])->name('maintenance.destroy');
+    });
+
+    // =====================================================================
+    // CATÁLOGO (autogestión) — admin + coordinador
+    // =====================================================================
+    Route::middleware('role:admin,coordinator')->group(function () {
+        // Maestros
+        Route::resource('maestros', InstructorController::class)
+            ->parameters(['maestros' => 'instructor'])
+            ->names('instructors')->except(['show', 'destroy']);
+        Route::patch('/maestros/{instructor}/toggle', [InstructorController::class, 'toggle'])->name('instructors.toggle');
+
+        // Programas
+        Route::resource('programas', ProgramController::class)
+            ->parameters(['programas' => 'program'])
+            ->names('programs')->except(['show', 'destroy']);
+        Route::patch('/programas/{program}/toggle', [ProgramController::class, 'toggle'])->name('programs.toggle');
+
+        // Niveles de un programa
+        Route::post('/programas/{program}/niveles', [ProgramController::class, 'storeLevel'])->name('programs.levels.store');
+        Route::put('/niveles/{level}', [ProgramController::class, 'updateLevel'])->name('programs.levels.update');
+        Route::delete('/niveles/{level}', [ProgramController::class, 'destroyLevel'])->name('programs.levels.destroy');
     });
 });

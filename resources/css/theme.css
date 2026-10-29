@@ -1290,3 +1290,6 @@ body.mp-dragging .dc-event { cursor: copy; }
 
 /* Nivel de programa en el bloque de clase (slice Fase 2) */
 .dc-ev-level { font-size: .68rem; font-weight: 700; opacity: .95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Separador de sección en la navegación (Fase 3) */
+.nav-section { font-size: .66rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); font-weight: 700; padding: .9rem .7rem .3rem; }

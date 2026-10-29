@@ -55,4 +55,22 @@
         <i class="fa-solid fa-wrench"></i> Mantenimiento
     </a>
     @endcan
+
+    @canany(['manage-instructors', 'manage-programs'])
+        <div class="nav-section">Catálogo</div>
+    @endcanany
+
+    @can('manage-instructors')
+    <a href="{{ route('instructors.index') }}"
+        class="app-nav-link {{ request()->routeIs('instructors.*') ? 'active' : '' }}">
+        <i class="fa-solid fa-chalkboard-user"></i> Maestros
+    </a>
+    @endcan
+
+    @can('manage-programs')
+    <a href="{{ route('programs.index') }}"
+        class="app-nav-link {{ request()->routeIs('programs.*') ? 'active' : '' }}">
+        <i class="fa-solid fa-layer-group"></i> Programas
+    </a>
+    @endcan
 </nav>

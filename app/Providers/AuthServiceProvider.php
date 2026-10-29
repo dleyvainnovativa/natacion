@@ -37,5 +37,11 @@ class AuthServiceProvider extends ServiceProvider
         // Gestión de socios: admin, coordinador, recepción.
         Gate::define('manage-members', fn(User $u) =>
         $u->hasAnyRole([Role::Admin, Role::Coordinator, Role::Receptionist]));
+
+        // Autogestión de catálogo: admin y coordinador (el "manager").
+        Gate::define('manage-instructors', fn(User $u) =>
+        $u->hasAnyRole([Role::Admin, Role::Coordinator]));
+        Gate::define('manage-programs', fn(User $u) =>
+        $u->hasAnyRole([Role::Admin, Role::Coordinator]));
     }
 }
