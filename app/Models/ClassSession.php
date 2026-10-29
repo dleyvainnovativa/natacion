@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class ClassSession extends Model
 {
     protected $fillable = [
-        'schedule_slot_id', 'program_id', 'lane_id',
+        'schedule_slot_id', 'program_id', 'level_id', 'lane_id',
         'scheduled_instructor_id', 'actual_instructor_id',
         'starts_at', 'duration_min', 'status', 'is_modified', 'notes',
     ];
@@ -21,6 +21,7 @@ class ClassSession extends Model
 
     public function slot()                { return $this->belongsTo(ScheduleSlot::class, 'schedule_slot_id'); }
     public function program()             { return $this->belongsTo(Program::class); }
+    public function level()               { return $this->belongsTo(ProgramLevel::class, 'level_id'); }
     public function lane()                { return $this->belongsTo(Lane::class); }
     public function scheduledInstructor() { return $this->belongsTo(Instructor::class, 'scheduled_instructor_id'); }
     public function actualInstructor()    { return $this->belongsTo(Instructor::class, 'actual_instructor_id'); }

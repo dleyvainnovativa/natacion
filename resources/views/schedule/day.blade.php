@@ -142,6 +142,7 @@
     </div>{{-- /.cal-layout --}}
 
     @include('schedule.partials.sessions-payload')
+    @include('schedule.partials.program-levels-payload')
 
 
     @can('move-classes')

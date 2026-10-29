@@ -41,6 +41,13 @@
                     </select>
                 </div>
 
+                <div class="mb-3 d-none" id="qa-level-wrap">
+                    <label class="form-label small">Nivel</label>
+                    <select name="level_id" id="qa-level" class="form-select">
+                        <option value="">— Sin nivel —</option>
+                    </select>
+                </div>
+
                 <div class="row g-2">
                     <div class="col-4">
                         <label class="form-label small">Hora *</label>

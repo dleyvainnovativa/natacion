@@ -142,6 +142,7 @@ class SessionGenerator
         $session = ClassSession::create([
             'schedule_slot_id'        => $slot->id,
             'program_id'              => $slot->program_id,
+            'level_id'                => $slot->level_id,
             'lane_id'                 => $slot->lane_id,
             'scheduled_instructor_id' => $slot->instructor_id,
             'actual_instructor_id'    => $slot->instructor_id,

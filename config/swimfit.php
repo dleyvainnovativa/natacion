@@ -68,6 +68,17 @@ return [
                     ['concepto' => '5 días a la semana', 'dias' => 5, 'monto' => 1820.00],
                 ]],
             ],
+            // Niveles de Swim Junior. El nivel define nombre + duración; el
+            // cupo es el del programa (6). Se eligen al agendar una clase.
+            'niveles' => [
+                ['slug' => 'naufragos-1',    'nombre' => 'Náufragos 1 (principiantes)', 'duracion_min' => 30, 'orden' => 1],
+                ['slug' => 'naufragos-2',    'nombre' => 'Náufragos 2 (intermedios)',   'duracion_min' => 30, 'orden' => 2],
+                ['slug' => 'naufragos-3',    'nombre' => 'Náufragos 3 (avanzados)',     'duracion_min' => 30, 'orden' => 3],
+                ['slug' => 'super-boyas',    'nombre' => 'Super Boyas',                 'duracion_min' => 30, 'orden' => 4],
+                ['slug' => 'salvavidas',     'nombre' => 'Salvavidas',                  'duracion_min' => 45, 'orden' => 5],
+                ['slug' => 'torpedos',       'nombre' => 'Torpedos',                    'duracion_min' => 45, 'orden' => 6],
+                ['slug' => 'super-torpedos', 'nombre' => 'Super Torpedos',              'duracion_min' => 45, 'orden' => 7],
+            ],
         ],
         'swim-adultos' => [
             'slug' => 'swim-adultos',
@@ -98,6 +109,18 @@ return [
                 ['concepto' => '2 días a la semana', 'dias' => 2, 'monto' => 870.00],
                 ['concepto' => '3 días a la semana', 'dias' => 3, 'monto' => 1000.00],
             ],
+        ],
+        'nado-libre' => [
+            'slug' => 'nado-libre',
+            'nombre' => 'Nado Libre',
+            'audiencia' => 'adults',
+            'edad' => '15 años en adelante',
+            'icono' => 'fa-water',
+            'color' => 'teal',
+            'duracion_min' => 50,
+            'cupo_carril' => 2,
+            'resumen' => 'Práctica libre de natación. Cada alumno entrena por su cuenta.',
+            // Precios pendientes de definir por el cliente.
         ],
     ],
 ];

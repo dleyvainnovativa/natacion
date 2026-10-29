@@ -27,6 +27,7 @@ class QuickClassController extends Controller
         $data = $request->validate([
             'scope'         => ['required', 'in:weekly,once'],
             'program_id'    => ['required', 'exists:programs,id'],
+            'level_id'      => ['nullable', 'exists:program_levels,id'],
             'instructor_id' => ['nullable', 'exists:instructors,id'],
             'lane_id'       => ['nullable', 'exists:lanes,id'],
             'start_date'    => ['required', 'date'],
@@ -37,13 +38,16 @@ class QuickClassController extends Controller
         ]);
 
         $date = Carbon::parse($data['start_date']);
-        $dur  = $data['duration_min'] ?? Program::find($data['program_id'])?->duration_min ?? 30;
+        $level = ! empty($data['level_id']) ? \App\Models\ProgramLevel::find($data['level_id']) : null;
+        // Duración: la del nivel si se eligió, si no la del programa.
+        $dur  = $data['duration_min'] ?? $level?->duration_min ?? Program::find($data['program_id'])?->duration_min ?? 30;
         $memberIds = $data['member_ids'] ?? [];
 
         if ($data['scope'] === 'weekly') {
             $template = ScheduleTemplate::resolveFor($date);
             $slot = $template->slots()->create([
                 'program_id'    => $data['program_id'],
+                'level_id'      => $data['level_id'] ?? null,
                 'instructor_id' => $data['instructor_id'] ?? null,
                 'lane_id'       => $data['lane_id'] ?? null,
                 'weekday'       => $date->isoWeekday(),
@@ -71,6 +75,7 @@ class QuickClassController extends Controller
             $session = ClassSession::create([
                 'schedule_slot_id'        => null,
                 'program_id'              => $data['program_id'],
+                'level_id'                => $data['level_id'] ?? null,
                 'lane_id'                 => $data['lane_id'] ?? null,
                 'scheduled_instructor_id' => $data['instructor_id'] ?? null,
                 'actual_instructor_id'    => $data['instructor_id'] ?? null,

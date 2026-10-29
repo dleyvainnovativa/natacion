@@ -16,6 +16,8 @@ class Program extends Model
     public function prices()          { return $this->hasMany(ProgramPrice::class); }
     public function membershipTypes() { return $this->hasMany(MembershipType::class); }
     public function slots()           { return $this->hasMany(ScheduleSlot::class); }
+    public function levels()          { return $this->hasMany(ProgramLevel::class)->where('active', true)->orderBy('position'); }
 
     public function isKids(): bool   { return $this->audience === 'kids'; }
+    public function hasLevels(): bool { return $this->levels()->exists(); }
 }

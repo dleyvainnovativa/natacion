@@ -1287,3 +1287,6 @@ body.mp-dragging .dc-event { cursor: copy; }
     .cal-layout { flex-direction: column; }
     .member-panel { flex-basis: auto; width: 100%; max-height: 320px; position: static; }
 }
+
+/* Nivel de programa en el bloque de clase (slice Fase 2) */
+.dc-ev-level { font-size: .68rem; font-weight: 700; opacity: .95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

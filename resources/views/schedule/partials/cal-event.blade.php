@@ -15,8 +15,9 @@
     $names  = $s->members
         ->map(fn ($m) => trim(($m->first_name ?? '') . ' ' . ($m->last_name_1 ?? '')))
         ->filter()->values();
-    // Cuántas líneas de nombre caben: alto del bloque menos la cabecera (~42px), ~12px por línea.
-    $maxLines = (int) floor(max(0, $h - 42) / 12);
+    // Cuántas líneas de nombre caben: alto menos cabecera (~42px, +12 si hay nivel), ~12px/línea.
+    $headPx   = 42 + ($s->level ? 12 : 0);
+    $maxLines = (int) floor(max(0, $h - $headPx) / 12);
     if ($names->count() <= $maxLines) {
         $show  = $names;            // caben todos
         $extra = 0;
@@ -38,6 +39,7 @@
         <span class="dc-ev-count {{ $full ? 'is-full' : '' }}">{{ $count }}@if ($cap)/{{ $cap }}@endif</span>
     </div>
     <div class="dc-event-title">{{ $s->program?->name ?? 'Clase' }}</div>
+    @if ($s->level)<div class="dc-ev-level">{{ $s->level->name }}</div>@endif
     <div class="dc-ev-inst"><i class="fa-solid fa-user"></i> {{ $s->actualInstructor?->name ?? '—' }}@if ($subbed) <span class="badge-role">supl.</span>@endif</div>
     @if ($maxLines > 0 && $names->count())
         <ul class="dc-ev-members">

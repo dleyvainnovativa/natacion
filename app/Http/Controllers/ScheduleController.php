@@ -15,6 +15,17 @@ use Illuminate\Support\Facades\DB;
 
 class ScheduleController extends Controller
 {
+    /** Mapa programa→niveles para los formularios (JS SF_PROGRAM_LEVELS). */
+    private function programLevelsPayload(): array
+    {
+        return Program::with('levels')->get()
+            ->mapWithKeys(fn ($p) => [
+                (string) $p->id => $p->levels
+                    ->map(fn ($l) => ['id' => $l->id, 'name' => $l->name, 'duration' => $l->duration_min])
+                    ->values()->all(),
+            ])->all();
+    }
+
     /**
      * Socios para el panel lateral del calendario, con cuántas clases tienen en
      * la semana de $weekStart (para arrastrarlos a una clase e inscribirlos).
@@ -73,6 +84,7 @@ class ScheduleController extends Controller
             ->where('status', '!=', 'cancelled')
             ->with([
                 'program',
+                'level:id,name',
                 'lane',
                 'actualInstructor',
                 'scheduledInstructor',
@@ -118,6 +130,7 @@ class ScheduleController extends Controller
             'filters'       => $request->only(['instructor', 'program', 'lane']),
             'sessionsPayload' => $this->sessionsPayload($sessions),
             'panelMembers'  => $this->panelMembers($weekStart),
+            'programLevels' => $this->programLevelsPayload(),
         ]);
     }
 
@@ -140,6 +153,7 @@ class ScheduleController extends Controller
             ->where('status', '!=', 'cancelled')
             ->with([
                 'program',
+                'level:id,name',
                 'lane',
                 'actualInstructor',
                 'scheduledInstructor',
@@ -171,6 +185,7 @@ class ScheduleController extends Controller
             'filters'     => $request->only(['instructor', 'program']),
             'sessionsPayload' => $this->sessionsPayload($sessions),
             'panelMembers' => $this->panelMembers($date->copy()->startOfWeek(Carbon::MONDAY)),
+            'programLevels' => $this->programLevelsPayload(),
         ]);
     }
 
@@ -203,7 +218,7 @@ class ScheduleController extends Controller
             }
         }
 
-        $slots = ScheduleSlot::with(['program', 'lane', 'instructor', 'members:id'])
+        $slots = ScheduleSlot::with(['program', 'level:id,name', 'lane', 'instructor', 'members:id'])
             ->where('schedule_template_id', $template->id)
             ->where('active', true)
             ->orderBy('weekday')->orderBy('start_time')
@@ -223,6 +238,7 @@ class ScheduleController extends Controller
             'lanes'       => Lane::with('pool')->orderBy('pool_id')->orderBy('position')->get(),
             'members'     => Member::orderBy('last_name_1')->orderBy('first_name')
                 ->get(['id', 'first_name', 'last_name_1', 'last_name_2', 'socio_number']),
+            'programLevels' => $this->programLevelsPayload(),
         ]);
     }
 

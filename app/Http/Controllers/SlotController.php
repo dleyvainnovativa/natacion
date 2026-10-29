@@ -25,8 +25,11 @@ class SlotController extends Controller
         $template = ScheduleTemplate::resolveFor($monthRef);
         unset($data['month']);
 
-        // Duración por defecto = la del programa (el usuario puede sobreescribir).
-        $data['duration_min'] ??= Program::find($data['program_id'])?->duration_min ?? 30;
+        // Duración por defecto: la del NIVEL si se eligió, si no la del programa.
+        if (empty($data['duration_min'])) {
+            $level = ! empty($data['level_id']) ? \App\Models\ProgramLevel::find($data['level_id']) : null;
+            $data['duration_min'] = $level?->duration_min ?? Program::find($data['program_id'])?->duration_min ?? 30;
+        }
 
         $slot = $template->slots()->create($data + ['active' => true]);
 
@@ -52,7 +55,10 @@ class SlotController extends Controller
         $hasMembers = $request->has('member_ids');
         $memberIds  = $data['member_ids'] ?? [];
         unset($data['member_ids'], $data['month']);
-        $data['duration_min'] ??= Program::find($data['program_id'])?->duration_min ?? $slot->duration_min;
+        if (empty($data['duration_min'])) {
+            $level = ! empty($data['level_id']) ? \App\Models\ProgramLevel::find($data['level_id']) : null;
+            $data['duration_min'] = $level?->duration_min ?? Program::find($data['program_id'])?->duration_min ?? $slot->duration_min;
+        }
 
         $slot->update($data);
 

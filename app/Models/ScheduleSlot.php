@@ -9,7 +9,7 @@ class ScheduleSlot extends Model
 {
     protected $fillable = [
         'schedule_template_id',
-        'program_id', 'instructor_id', 'lane_id',
+        'program_id', 'level_id', 'instructor_id', 'lane_id',
         'weekday', 'start_time', 'duration_min', 'active', 'source',
     ];
 
@@ -17,6 +17,7 @@ class ScheduleSlot extends Model
 
     public function template()   { return $this->belongsTo(ScheduleTemplate::class, 'schedule_template_id'); }
     public function program()    { return $this->belongsTo(Program::class); }
+    public function level()      { return $this->belongsTo(ProgramLevel::class, 'level_id'); }
     public function instructor() { return $this->belongsTo(Instructor::class); }
     public function lane()       { return $this->belongsTo(Lane::class); }
     public function sessions()   { return $this->hasMany(ClassSession::class); }

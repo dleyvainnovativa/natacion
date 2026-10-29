@@ -840,6 +840,7 @@ function openSlotEdit(d) {
     document.getElementById('slotSubmitBtn').textContent = 'Guardar';
 
     document.getElementById('slot-program').value    = d.program || '';
+    syncLevelField('slot-program', 'slot-level', 'slot-level-wrap', d.levelId || '');
     document.getElementById('slot-weekday').value    = d.weekday || '';
     document.getElementById('slot-start').value      = d.start || '';
     document.getElementById('slot-lane').value       = d.lane || '';
@@ -865,6 +866,7 @@ function openSlotAdd() {
         // program/weekday/lane/instructor quedan en su primer valor por defecto.
         document.getElementById('slot-lane').value = '';
         document.getElementById('slot-instructor').value = '';
+        syncLevelField('slot-program', 'slot-level', 'slot-level-wrap', '');
         setSlotMembers([]); // sin socios por defecto
     }
     SF.modal.show('slotModal');
@@ -1177,6 +1179,41 @@ function updateChecklistCount(listSelector, countSelector) {
     if (el) el.textContent = n;
 }
 
+/** Muestra/llena el <select> de nivel según el programa elegido.
+ *  Usa window.SF_PROGRAM_LEVELS = { programId: [{id,name,duration}] }. */
+function syncLevelField(progSelId, levelSelId, wrapId, selectedId = '') {
+    const prog = document.getElementById(progSelId);
+    const sel  = document.getElementById(levelSelId);
+    const wrap = document.getElementById(wrapId);
+    if (!prog || !sel || !wrap) return;
+
+    const levels = (window.SF_PROGRAM_LEVELS || {})[prog.value] || [];
+    if (!levels.length) {
+        wrap.classList.add('d-none');
+        sel.innerHTML = '<option value="">— Sin nivel —</option>';
+        sel.value = '';
+        return;
+    }
+    wrap.classList.remove('d-none');
+    sel.innerHTML = '<option value="">— Sin nivel —</option>'
+        + levels.map((l) => `<option value="${l.id}" data-duration="${l.duration}">${l.name} (${l.duration}′)</option>`).join('');
+    sel.value = selectedId || '';
+}
+
+function initLevelSelects() {
+    const qp = document.getElementById('qa-program');
+    if (qp) {
+        qp.addEventListener('change', () => syncLevelField('qa-program', 'qa-level', 'qa-level-wrap'));
+        syncLevelField('qa-program', 'qa-level', 'qa-level-wrap');
+    }
+    const sp = document.getElementById('slot-program');
+    if (sp) {
+        sp.addEventListener('change', () => syncLevelField('slot-program', 'slot-level', 'slot-level-wrap'));
+    }
+}
+document.addEventListener('DOMContentLoaded', initLevelSelects);
+Object.assign(window.SF, { syncLevelField });
+
 const QA_SNAP = 15; // minutos
 
 function initQuickAdd() {
@@ -1212,6 +1249,7 @@ function openQuickAdd(date, minutes, laneId) {
     if (laneSel) laneSel.value = laneId || '';
     document.getElementById('qa-instructor').value = '';
     document.getElementById('qa-scope-weekly').checked = true;
+    syncLevelField('qa-program', 'qa-level', 'qa-level-wrap', '');
     document.querySelectorAll('#qa-members input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
     updateChecklistCount('#qa-members', '#qa-roster-count');
 

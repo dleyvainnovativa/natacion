@@ -10,6 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             ProgramSeeder::class,        // T0: programas + precios desde config
+            ProgramLevelSeeder::class,   // niveles de programa (Swim Junior)
             MembershipTypeSeeder::class, // T0: 31 tipos de socio
             UserSeeder::class,           // T0: 1 usuario por rol
             FacilitySeeder::class,       // T2: alberca, carriles, instructores

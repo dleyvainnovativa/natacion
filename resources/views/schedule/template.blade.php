@@ -61,6 +61,7 @@
                              data-slot-id="{{ $slot->id }}"
                              data-program="{{ $slot->program_id }}"
                              data-program-name="{{ $slot->program?->name }}"
+                             data-level-id="{{ $slot->level_id }}"
                              data-weekday="{{ $slot->weekday }}"
                              data-start="{{ \Illuminate\Support\Str::of($slot->start_time)->substr(0,5) }}"
                              data-lane="{{ $slot->lane_id }}"
@@ -75,6 +76,7 @@
                                 <span class="small text-muted">{{ $slot->duration_min }}′</span>
                             </div>
                             <div class="fw-600 small">{{ $slot->program?->name }}</div>
+                            @if ($slot->level)<div class="small" style="color:var(--brand-teal-600)">{{ $slot->level->name }}</div>@endif
                             <div class="small text-muted">{{ $slot->lane?->label ?? 'Sin carril' }}</div>
                             <div class="small">{{ $slot->instructor?->name ?? 'Sin instructor' }}</div>
                             <div class="small text-muted mt-1">
@@ -123,6 +125,13 @@
                                     {{ $p->name }} ({{ $p->duration_min }}′, cupo {{ $p->lane_capacity }})
                                 </option>
                             @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3 d-none" id="slot-level-wrap">
+                        <label class="form-label small">Nivel</label>
+                        <select name="level_id" id="slot-level" class="form-select">
+                            <option value="">— Sin nivel —</option>
                         </select>
                     </div>
                     <div class="row g-2">
@@ -198,4 +207,6 @@
     <form method="POST" id="slotDeleteForm" class="d-none">
         @csrf @method('DELETE')
     </form>
+
+    @include('schedule.partials.program-levels-payload')
 @endsection
