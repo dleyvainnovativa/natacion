@@ -184,6 +184,25 @@ class ScheduleController extends Controller
         // Resuelve (crea/clona) la plantilla del mes elegido.
         $template = \App\Models\ScheduleTemplate::resolveFor($monthRef);
 
+        // Si el mes quedó VACÍO (p. ej. se creó solo por una semana que cruzaba
+        // de mes antes de terminar el mes anterior), heredar del mes previo más
+        // reciente que SÍ tenga clases. Arregla "me fui a noviembre y no aparece".
+        // Sólo cuando hay 0 slots: nunca pisa un mes que ya se empezó a armar.
+        if ($template->slots()->count() === 0) {
+            $prior = \App\Models\ScheduleTemplate::query()
+                ->where(function ($q) use ($monthRef) {
+                    $q->where('year', '<', $monthRef->year)
+                      ->orWhere(fn ($w) => $w->where('year', $monthRef->year)->where('month', '<', $monthRef->month));
+                })
+                ->whereHas('slots')
+                ->orderByDesc('year')->orderByDesc('month')
+                ->first();
+
+            if ($prior) {
+                $template->cloneSlotsFrom($prior);
+            }
+        }
+
         $slots = ScheduleSlot::with(['program', 'lane', 'instructor', 'members:id'])
             ->where('schedule_template_id', $template->id)
             ->where('active', true)

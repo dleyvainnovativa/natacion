@@ -52,7 +52,7 @@ return [
             'icono' => 'fa-child-reaching',
             'color' => 'green',
             'duracion_min' => 45,
-            'cupo_carril' => 7,
+            'cupo_carril' => 6,
             'resumen' => 'Niños aprenden a nadar en grupos de 5 a 6 por maestro.',
             'precios_grupos' => [
                 ['titulo' => 'Niveles 1 y 2 (30 min)', 'precios' => [
@@ -92,7 +92,7 @@ return [
             'icono' => 'fa-dumbbell',
             'color' => 'green',
             'duracion_min' => 50,
-            'cupo_carril' => 2,
+            'cupo_carril' => 6,
             'resumen' => 'Zumba, cardio y kick boxing. No es necesario saber nadar.',
             'precios' => [
                 ['concepto' => '2 días a la semana', 'dias' => 2, 'monto' => 870.00],

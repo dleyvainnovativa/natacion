@@ -50,8 +50,20 @@ class SessionGenerator
                 $iso = $day->isoWeekday();                 // 1..7
                 $key = $day->format('Y-m');
 
-                $template = $templateCache[$key]
-                    ??= ScheduleTemplate::resolveFor($day);
+                if (! array_key_exists($key, $templateCache)) {
+                    // No crear plantillas de meses FUTUROS al generar una semana
+                    // que cruza de mes: eso creaba "noviembre" vacío/incompleto a
+                    // partir de un mes a medio armar. El mes futuro se crea sólo
+                    // cuando el usuario lo abre en la plantilla.
+                    $templateCache[$key] = $day->greaterThan(Carbon::now()->endOfMonth())
+                        ? ScheduleTemplate::forDate($day)       // futuro: sólo si ya existe
+                        : ScheduleTemplate::resolveFor($day);   // actual/pasado: crear/clonar
+                }
+
+                $template = $templateCache[$key];
+                if (! $template) {
+                    continue; // mes futuro aún no configurado → no generar esos días
+                }
 
                 // Slots activos de ESTA plantilla para ESTE día de la semana.
                 $slots = ScheduleSlot::with('members:id')
