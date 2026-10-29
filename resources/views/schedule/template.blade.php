@@ -66,6 +66,7 @@
                              data-start="{{ \Illuminate\Support\Str::of($slot->start_time)->substr(0,5) }}"
                              data-lane="{{ $slot->lane_id }}"
                              data-instructor="{{ $slot->instructor_id }}"
+                             data-instructor2="{{ $slot->instructor_id_2 }}"
                              data-duration="{{ $slot->duration_min }}"
                              data-roster-ids="{{ $slot->members->pluck('id')->implode(',') }}"
                              data-roster-url="{{ route('schedule.slots.roster', $slot) }}"
@@ -78,7 +79,7 @@
                             <div class="fw-600 small">{{ $slot->program?->name }}</div>
                             @if ($slot->level)<div class="small" style="color:var(--brand-teal-600)">{{ $slot->level->name }}</div>@endif
                             <div class="small text-muted">{{ $slot->lane?->label ?? 'Sin carril' }}</div>
-                            <div class="small">{{ $slot->instructor?->name ?? 'Sin instructor' }}</div>
+                            <div class="small">{{ $slot->instructor?->name ?? 'Sin instructor' }}@if ($slot->instructor2) <span class="text-muted">+ {{ $slot->instructor2->name }}</span>@endif</div>
                             <div class="small text-muted mt-1">
                                 <i class="fa-solid fa-users"></i> {{ $slot->members->count() }} en roster
                             </div>
@@ -168,6 +169,16 @@
                             </select>
                         </div>
                     </div>
+                    <div class="mt-2">
+                        <label class="form-label small">Segundo maestro (opcional)</label>
+                        <select name="instructor_id_2" id="slot-instructor-2" class="form-select">
+                            <option value="">— Ninguno —</option>
+                            @foreach ($instructors as $i)
+                                <option value="{{ $i->id }}">{{ $i->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     <div class="mt-2">
                         <label class="form-label small">Duración (min) — vacío = la del programa</label>
                         <input type="number" name="duration_min" id="slot-duration" class="form-control" min="5" max="240">

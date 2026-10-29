@@ -73,6 +73,16 @@
                     </div>
                 </div>
 
+                <div class="mt-2">
+                    <label class="form-label small">Segundo maestro (opcional)</label>
+                    <select name="instructor_id_2" id="qa-instructor-2" class="form-select">
+                        <option value="">— Ninguno —</option>
+                        @foreach ($instructors as $i)
+                            <option value="{{ $i->id }}">{{ $i->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <div class="mt-3">
                     <label class="form-label small d-flex justify-content-between">
                         <span>Socios</span>

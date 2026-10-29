@@ -41,6 +41,7 @@
                         <th class="ps-3">Instructor</th>
                         <th class="text-end">Clases impartidas</th>
                         <th class="text-end">Como suplente</th>
+                        <th class="text-end">Como co-maestro</th>
                         <th class="text-end">Pago/clase</th>
                         <th class="text-end pe-3">Total</th>
                     </tr>
@@ -53,11 +54,14 @@
                             <td class="text-end mono">
                                 {{ $r['substituted_in'] ?: '—' }}
                             </td>
+                            <td class="text-end mono">
+                                {{ ($r['as_co'] ?? 0) ?: '—' }}
+                            </td>
                             <td class="text-end mono">${{ number_format($r['pay_per_class'], 2) }}</td>
                             <td class="text-end pe-3 mono fw-600">${{ number_format($r['total'], 2) }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="text-center text-muted py-5">
+                        <tr><td colspan="6" class="text-center text-muted py-5">
                             No hay clases impartidas en este periodo.
                         </td></tr>
                     @endforelse
@@ -67,7 +71,7 @@
                         <tr class="fw-600" style="border-top:2px solid var(--border)">
                             <td class="ps-3">Total del periodo</td>
                             <td class="text-end mono">{{ $rows->sum('classes_taught') }}</td>
-                            <td></td><td></td>
+                            <td></td><td></td><td></td>
                             <td class="text-end pe-3 mono">${{ number_format($total, 2) }}</td>
                         </tr>
                     </tfoot>

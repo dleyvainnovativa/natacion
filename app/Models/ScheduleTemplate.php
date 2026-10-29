@@ -93,10 +93,11 @@ class ScheduleTemplate extends Model
 
         foreach ($source->slots as $slot) {
             $copy = $this->slots()->create([
-                'program_id'   => $slot->program_id,
-                'level_id'     => $slot->level_id,
-                'instructor_id'=> $slot->instructor_id,
-                'lane_id'      => $slot->lane_id,
+                'program_id'     => $slot->program_id,
+                'level_id'       => $slot->level_id,
+                'instructor_id'  => $slot->instructor_id,
+                'instructor_id_2'=> $slot->instructor_id_2,
+                'lane_id'        => $slot->lane_id,
                 'weekday'      => $slot->weekday,
                 'start_time'   => $slot->start_time,
                 'duration_min' => $slot->duration_min,

@@ -146,6 +146,7 @@ class SessionGenerator
             'lane_id'                 => $slot->lane_id,
             'scheduled_instructor_id' => $slot->instructor_id,
             'actual_instructor_id'    => $slot->instructor_id,
+            'instructor_id_2'         => $slot->instructor_id_2,
             'starts_at'               => $startsAt,
             'duration_min'            => $slot->duration_min,
             'status'                  => 'scheduled',

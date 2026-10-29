@@ -845,6 +845,7 @@ function openSlotEdit(d) {
     document.getElementById('slot-start').value      = d.start || '';
     document.getElementById('slot-lane').value       = d.lane || '';
     document.getElementById('slot-instructor').value = d.instructor || '';
+    const si2 = document.getElementById('slot-instructor-2'); if (si2) si2.value = d.instructor2 || '';
     document.getElementById('slot-duration').value   = d.duration || '';
 
     // Roster: marcar los socios actuales de la clase.
@@ -866,6 +867,7 @@ function openSlotAdd() {
         // program/weekday/lane/instructor quedan en su primer valor por defecto.
         document.getElementById('slot-lane').value = '';
         document.getElementById('slot-instructor').value = '';
+        const si2 = document.getElementById('slot-instructor-2'); if (si2) si2.value = '';
         syncLevelField('slot-program', 'slot-level', 'slot-level-wrap', '');
         setSlotMembers([]); // sin socios por defecto
     }
@@ -1248,6 +1250,7 @@ function openQuickAdd(date, minutes, laneId) {
     const laneSel = document.getElementById('qa-lane');
     if (laneSel) laneSel.value = laneId || '';
     document.getElementById('qa-instructor').value = '';
+    const qi2 = document.getElementById('qa-instructor-2'); if (qi2) qi2.value = '';
     document.getElementById('qa-scope-weekly').checked = true;
     syncLevelField('qa-program', 'qa-level', 'qa-level-wrap', '');
     document.querySelectorAll('#qa-members input[type="checkbox"]').forEach((cb) => { cb.checked = false; });

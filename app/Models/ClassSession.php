@@ -10,7 +10,7 @@ class ClassSession extends Model
 {
     protected $fillable = [
         'schedule_slot_id', 'program_id', 'level_id', 'lane_id',
-        'scheduled_instructor_id', 'actual_instructor_id',
+        'scheduled_instructor_id', 'actual_instructor_id', 'instructor_id_2',
         'starts_at', 'duration_min', 'status', 'is_modified', 'notes',
     ];
 
@@ -25,6 +25,7 @@ class ClassSession extends Model
     public function lane()                { return $this->belongsTo(Lane::class); }
     public function scheduledInstructor() { return $this->belongsTo(Instructor::class, 'scheduled_instructor_id'); }
     public function actualInstructor()    { return $this->belongsTo(Instructor::class, 'actual_instructor_id'); }
+    public function instructor2()         { return $this->belongsTo(Instructor::class, 'instructor_id_2'); }
     public function members()             { return $this->belongsToMany(Member::class, 'session_members')->withTimestamps(); }
     public function memberAttendances()   { return $this->hasMany(MemberAttendance::class); }
     public function instructorAttendance(){ return $this->hasOne(InstructorAttendance::class); }

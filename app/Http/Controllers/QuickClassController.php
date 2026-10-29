@@ -27,8 +27,9 @@ class QuickClassController extends Controller
         $data = $request->validate([
             'scope'         => ['required', 'in:weekly,once'],
             'program_id'    => ['required', 'exists:programs,id'],
-            'level_id'      => ['nullable', 'exists:program_levels,id'],
-            'instructor_id' => ['nullable', 'exists:instructors,id'],
+            'level_id'       => ['nullable', 'exists:program_levels,id'],
+            'instructor_id'   => ['nullable', 'exists:instructors,id'],
+            'instructor_id_2' => ['nullable', 'exists:instructors,id', 'different:instructor_id'],
             'lane_id'       => ['nullable', 'exists:lanes,id'],
             'start_date'    => ['required', 'date'],
             'start_time'    => ['required', 'date_format:H:i'],
@@ -46,11 +47,12 @@ class QuickClassController extends Controller
         if ($data['scope'] === 'weekly') {
             $template = ScheduleTemplate::resolveFor($date);
             $slot = $template->slots()->create([
-                'program_id'    => $data['program_id'],
-                'level_id'      => $data['level_id'] ?? null,
-                'instructor_id' => $data['instructor_id'] ?? null,
-                'lane_id'       => $data['lane_id'] ?? null,
-                'weekday'       => $date->isoWeekday(),
+                'program_id'      => $data['program_id'],
+                'level_id'        => $data['level_id'] ?? null,
+                'instructor_id'   => $data['instructor_id'] ?? null,
+                'instructor_id_2' => $data['instructor_id_2'] ?? null,
+                'lane_id'         => $data['lane_id'] ?? null,
+                'weekday'         => $date->isoWeekday(),
                 'start_time'    => $data['start_time'],
                 'duration_min'  => $dur,
                 'active'        => true,
@@ -79,6 +81,7 @@ class QuickClassController extends Controller
                 'lane_id'                 => $data['lane_id'] ?? null,
                 'scheduled_instructor_id' => $data['instructor_id'] ?? null,
                 'actual_instructor_id'    => $data['instructor_id'] ?? null,
+                'instructor_id_2'         => $data['instructor_id_2'] ?? null,
                 'starts_at'               => $date->copy()->setTimeFromTimeString($data['start_time']),
                 'duration_min'            => $dur,
                 'status'                  => 'scheduled',

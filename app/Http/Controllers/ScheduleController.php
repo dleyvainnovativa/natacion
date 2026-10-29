@@ -88,6 +88,7 @@ class ScheduleController extends Controller
                 'lane',
                 'actualInstructor',
                 'scheduledInstructor',
+                'instructor2:id,name',
                 'members:id,socio_number,first_name,last_name_1'
             ])
             ->orderBy('starts_at')
@@ -157,6 +158,7 @@ class ScheduleController extends Controller
                 'lane',
                 'actualInstructor',
                 'scheduledInstructor',
+                'instructor2:id,name',
                 'members:id,socio_number,first_name,last_name_1'
             ])
             ->orderBy('starts_at')
@@ -218,7 +220,7 @@ class ScheduleController extends Controller
             }
         }
 
-        $slots = ScheduleSlot::with(['program', 'level:id,name', 'lane', 'instructor', 'members:id'])
+        $slots = ScheduleSlot::with(['program', 'level:id,name', 'lane', 'instructor', 'instructor2:id,name', 'members:id'])
             ->where('schedule_template_id', $template->id)
             ->where('active', true)
             ->orderBy('weekday')->orderBy('start_time')

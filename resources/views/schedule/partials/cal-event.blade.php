@@ -39,9 +39,16 @@
         <span class="dc-ev-count {{ $full ? 'is-full' : '' }}">{{ $count }}@if ($cap)/{{ $cap }}@endif</span>
     </div>
     <div class="dc-event-title">{{ $s->program?->name ?? 'Clase' }}</div>
-    @if ($s->level)<div class="dc-ev-level">{{ $s->level->name }}</div>@endif
-    <div class="dc-ev-inst"><i class="fa-solid fa-user"></i> {{ $s->actualInstructor?->name ?? '—' }}@if ($subbed) <span class="badge-role">supl.</span>@endif</div>
-    @if ($maxLines > 0 && $names->count())
+    @if ($s->level)
+    <div class="dc-ev-level">{{ $s->level->name }}</div>
+    @endif
+    <div class="dc-ev-inst"><i class="fa-solid {{ $s->instructor2 ? 'fa-user-group' : 'fa-user' }}"></i> {{ $s->actualInstructor?->name ?? '—' }}
+    @if ($subbed) 
+    <span class="badge-role">supl.</span>@endif
+    @if ($s->instructor2) + {{ $s->instructor2->name }}
+    @endif
+</div>
+    @if($maxLines > 0 && $names->count())
         <ul class="dc-ev-members">
             @foreach ($show as $n)<li>{{ $n }}</li>@endforeach
             @if ($extra > 0)<li class="more">+{{ $extra }} más</li>@endif

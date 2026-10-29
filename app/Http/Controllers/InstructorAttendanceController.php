@@ -23,7 +23,7 @@ class InstructorAttendanceController extends Controller
             : Carbon::today();
 
         $sessions = ClassSession::with([
-                'program', 'lane', 'scheduledInstructor', 'actualInstructor', 'instructorAttendance',
+                'program', 'lane', 'scheduledInstructor', 'actualInstructor', 'instructor2', 'instructorAttendance',
             ])
             ->whereDate('starts_at', $date->toDateString())
             ->where('status', '!=', 'cancelled')

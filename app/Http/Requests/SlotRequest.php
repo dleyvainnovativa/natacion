@@ -16,8 +16,9 @@ class SlotRequest extends FormRequest
         return [
             'month'         => ['nullable', 'regex:/^\d{4}-\d{2}$/'],
             'program_id'    => ['required', 'exists:programs,id'],
-            'level_id'      => ['nullable', 'exists:program_levels,id'],
-            'instructor_id' => ['nullable', 'exists:instructors,id'],
+            'level_id'       => ['nullable', 'exists:program_levels,id'],
+            'instructor_id'   => ['nullable', 'exists:instructors,id'],
+            'instructor_id_2' => ['nullable', 'exists:instructors,id', 'different:instructor_id'],
             'lane_id'       => ['nullable', 'exists:lanes,id'],
             'weekday'       => ['required', 'integer', 'between:1,7'],
             'start_time'    => ['required', 'date_format:H:i'],
