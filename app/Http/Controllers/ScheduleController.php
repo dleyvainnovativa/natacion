@@ -195,44 +195,20 @@ class ScheduleController extends Controller
     {
         $this->authorize('move-classes');
 
-        // Mes seleccionado (YYYY-MM); por defecto el mes actual.
-        $monthRef = $this->parseMonth($request->query('month'));
-
-        // Resuelve (crea/clona) la plantilla del mes elegido.
-        $template = \App\Models\ScheduleTemplate::resolveFor($monthRef);
-
-        // Si el mes quedó VACÍO (p. ej. se creó solo por una semana que cruzaba
-        // de mes antes de terminar el mes anterior), heredar del mes previo más
-        // reciente que SÍ tenga clases. Arregla "me fui a noviembre y no aparece".
-        // Sólo cuando hay 0 slots: nunca pisa un mes que ya se empezó a armar.
-        if ($template->slots()->count() === 0) {
-            $prior = \App\Models\ScheduleTemplate::query()
-                ->where(function ($q) use ($monthRef) {
-                    $q->where('year', '<', $monthRef->year)
-                      ->orWhere(fn ($w) => $w->where('year', $monthRef->year)->where('month', '<', $monthRef->month));
-                })
-                ->whereHas('slots')
-                ->orderByDesc('year')->orderByDesc('month')
-                ->first();
-
-            if ($prior) {
-                $template->cloneSlotsFrom($prior);
-            }
-        }
+        // Horario base "para siempre": ya no hay meses. Se muestran las clases
+        // recurrentes activas y VIGENTES hoy (effective_from <= hoy y
+        // effective_to null o >= hoy).
+        $today = Carbon::now()->toDateString();
 
         $slots = ScheduleSlot::with(['program', 'level:id,name', 'lane', 'instructor', 'instructor2:id,name', 'members:id'])
-            ->where('schedule_template_id', $template->id)
             ->where('active', true)
+            ->whereDate('effective_from', '<=', $today)
+            ->where(fn ($q) => $q->whereNull('effective_to')
+                ->orWhereDate('effective_to', '>=', $today))
             ->orderBy('weekday')->orderBy('start_time')
             ->get()->groupBy('weekday');
 
-        // Lista de meses existentes para el selector (más reciente primero).
-        $months = \App\Models\ScheduleTemplate::orderByDesc('year')->orderByDesc('month')->get();
-
         return view('schedule.template', [
-            'template'    => $template,
-            'month'       => $template->key_month,   // 'YYYY-MM'
-            'months'      => $months,
             'slots'       => $slots,
             'weekdays'    => $this->weekdayLabels(),
             'programs'    => Program::where('active', true)->orderBy('name')->get(),
@@ -242,15 +218,6 @@ class ScheduleController extends Controller
                 ->get(['id', 'first_name', 'last_name_1', 'last_name_2', 'socio_number']),
             'programLevels' => $this->programLevelsPayload(),
         ]);
-    }
-
-    /** Convierte 'YYYY-MM' a un Carbon en el día 1 de ese mes; default: hoy. */
-    private function parseMonth(?string $month): Carbon
-    {
-        if ($month && preg_match('/^\d{4}-\d{2}$/', $month)) {
-            return Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
-        }
-        return Carbon::now()->startOfMonth();
     }
 
     /**

@@ -8,33 +8,15 @@
             <a href="{{ route('schedule.index') }}" class="text-decoration-none small text-muted">
                 <i class="fa-solid fa-arrow-left me-1"></i> Horario
             </a>
-            <h1 class="h3 mt-2 mb-0">Plantilla · {{ $template->display_label }}</h1>
-            <p class="text-muted mb-0">Las clases aquí se repiten cada semana de este mes y generan las sesiones.</p>
+            <h1 class="h3 mt-2 mb-0">Horario base</h1>
+            <p class="text-muted mb-0">Las clases aquí se repiten cada semana, para siempre, y generan las sesiones automáticamente.</p>
         </div>
         <div class="d-flex gap-2 align-items-center flex-wrap">
-            {{-- Selector de mes --}}
-            <form method="GET" class="d-flex align-items-center gap-2" id="monthForm">
-                <label class="form-label small mb-0 text-muted">Mes</label>
-                <input type="month" name="month" value="{{ $month }}"
-                       class="form-control form-control-sm" style="width:auto"
-                       onchange="document.getElementById('monthForm').submit()">
-            </form>
             <button class="btn btn-brand" onclick="SF.openSlotAdd()">
                 <i class="fa-solid fa-plus me-1"></i> Agregar clase
             </button>
         </div>
     </div>
-
-    @if ($months->count() > 1)
-        <div class="mb-3 d-flex flex-wrap gap-1">
-            @foreach ($months as $m)
-                <a href="{{ route('schedule.template', ['month' => $m->key_month]) }}"
-                   class="btn btn-sm {{ $m->key_month === $month ? 'btn-brand' : 'btn-outline-secondary' }}">
-                    {{ $m->display_label }}
-                </a>
-            @endforeach
-        </div>
-    @endif
 
     @if (session('ok'))
         <div class="alert alert-success py-2">{{ session('ok') }}</div>
@@ -89,7 +71,7 @@
                                    onclick="event.stopPropagation()">Roster</a>
                                 <form method="POST" action="{{ route('schedule.slots.destroy', $slot) }}"
                                       onclick="event.stopPropagation()"
-                                      onsubmit="return confirm('¿Quitar esta clase de la plantilla?')">
+                                      onsubmit="return confirm('¿Quitar esta clase del horario base?')">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-outline-danger">
                                         <i class="fa-solid fa-trash"></i>
@@ -112,7 +94,6 @@
                   id="slotForm" data-store-url="{{ route('schedule.slots.store') }}">
                 @csrf
                 <input type="hidden" name="_method" id="slot-method" value="POST">
-                <input type="hidden" name="month" value="{{ $month }}">
                 <div class="modal-header">
                     <h5 class="modal-title" id="slotModalTitle">Agregar clase</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

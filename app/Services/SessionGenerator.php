@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\ClassSession;
 use App\Models\ScheduleSlot;
-use App\Models\ScheduleTemplate;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -25,12 +24,41 @@ use Illuminate\Support\Facades\DB;
 class SessionGenerator
 {
     /**
-     * Genera las sesiones de la semana que contiene $reference.
+     * Horizonte por defecto de materialización hacia adelante (en semanas).
+     * Con el horario "para siempre" no generamos infinito: mantenemos siempre
+     * las próximas ~8 semanas creadas. El cron semanal corre el horizonte y así
+     * la ventana avanza sola.
+     */
+    public const HORIZON_WEEKS = 8;
+
+    /**
+     * Materializa el horizonte hacia adelante desde HOY: la semana actual y las
+     * siguientes HORIZON_WEEKS. Idempotente. Es lo que corre el cron semanal en
+     * el modelo "para siempre".
      *
-     * La semana puede cruzar dos meses (p. ej. 31 ago – 6 sep). Por eso el mes
-     * se decide POR DÍA: para cada día de la semana se resuelve la plantilla de
-     * su mes (creándola/clonando si no existe) y se materializan sus slots de
-     * ese día de la semana.
+     * @return array{created:int, skipped:int}
+     */
+    public function generateHorizon(?int $weeks = null): array
+    {
+        $weeks = $weeks ?? self::HORIZON_WEEKS;
+        $created = 0;
+        $skipped = 0;
+
+        $start = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        for ($w = 0; $w <= $weeks; $w++) {
+            $r = $this->generateWeek($start->copy()->addWeeks($w));
+            $created += $r['created'];
+            $skipped += $r['skipped'];
+        }
+
+        return compact('created', 'skipped');
+    }
+
+    /**
+     * Genera las sesiones de la semana que contiene $reference a partir de las
+     * clases recurrentes (slots) VIGENTES ese día. Horario "para siempre": ya no
+     * hay plantillas por mes; cada slot vale desde effective_from hasta
+     * effective_to (null = para siempre).
      *
      * @return array{created:int, skipped:int}
      */
@@ -42,34 +70,16 @@ class SessionGenerator
         $weekStart = $reference->copy()->startOfWeek(Carbon::MONDAY);
 
         DB::transaction(function () use ($weekStart, &$created, &$skipped) {
-            // Cache de plantillas por "YYYY-MM" para no resolver dos veces.
-            $templateCache = [];
-
             for ($i = 0; $i < 7; $i++) {
                 $day = $weekStart->copy()->addDays($i);
-                $iso = $day->isoWeekday();                 // 1..7
-                $key = $day->format('Y-m');
+                $iso = $day->isoWeekday();   // 1..7
 
-                if (! array_key_exists($key, $templateCache)) {
-                    // No crear plantillas de meses FUTUROS al generar una semana
-                    // que cruza de mes: eso creaba "noviembre" vacío/incompleto a
-                    // partir de un mes a medio armar. El mes futuro se crea sólo
-                    // cuando el usuario lo abre en la plantilla.
-                    $templateCache[$key] = $day->greaterThan(Carbon::now()->endOfMonth())
-                        ? ScheduleTemplate::forDate($day)       // futuro: sólo si ya existe
-                        : ScheduleTemplate::resolveFor($day);   // actual/pasado: crear/clonar
-                }
-
-                $template = $templateCache[$key];
-                if (! $template) {
-                    continue; // mes futuro aún no configurado → no generar esos días
-                }
-
-                // Slots activos de ESTA plantilla para ESTE día de la semana.
                 $slots = ScheduleSlot::with('members:id')
-                    ->where('schedule_template_id', $template->id)
                     ->where('active', true)
                     ->where('weekday', $iso)
+                    ->whereDate('effective_from', '<=', $day->toDateString())
+                    ->where(fn ($q) => $q->whereNull('effective_to')
+                        ->orWhereDate('effective_to', '>=', $day->toDateString()))
                     ->get();
 
                 foreach ($slots as $slot) {
@@ -89,6 +99,25 @@ class SessionGenerator
      *
      * @return array{created:int, skipped:int}
      */
+    /**
+     * Materializa un slot recién creado/editado a lo largo del horizonte: desde
+     * HOY (o su effective_from si es futuro) hasta HOY + HORIZON_WEEKS. Así la
+     * clase "para siempre" aparece de inmediato esta semana y las próximas.
+     *
+     * @return array{created:int, skipped:int}
+     */
+    public function generateForSlotForward(ScheduleSlot $slot, ?int $weeks = null): array
+    {
+        $weeks = $weeks ?? self::HORIZON_WEEKS;
+        $from = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        if ($slot->effective_from && $slot->effective_from->gt($from)) {
+            $from = $slot->effective_from->copy()->startOfWeek(Carbon::MONDAY);
+        }
+        $to = Carbon::now()->startOfWeek(Carbon::MONDAY)->addWeeks($weeks)->endOfWeek(Carbon::SUNDAY);
+
+        return $this->generateForSlot($slot, $from, $to);
+    }
+
     public function generateForSlot(ScheduleSlot $slot, Carbon $from, Carbon $to): array
     {
         if (! $slot->active) {
@@ -125,6 +154,14 @@ class SessionGenerator
     {
         [$h, $m] = array_pad(explode(':', (string) $slot->start_time), 2, 0);
         $startsAt = $day->copy()->setTime((int) $h, (int) $m, 0);
+
+        // Respetar la vigencia del slot (horario para siempre).
+        if ($slot->effective_from && $day->lt($slot->effective_from->copy()->startOfDay())) {
+            return [$created, $skipped + 1];
+        }
+        if ($slot->effective_to && $day->gt($slot->effective_to->copy()->endOfDay())) {
+            return [$created, $skipped + 1];
+        }
 
         // Dedup por slot + DÍA (no por hora exacta): si este slot ya tiene una
         // sesión ese día, no crear otra. Esto evita el duplicado al arrastrar:

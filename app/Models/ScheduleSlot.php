@@ -11,9 +11,14 @@ class ScheduleSlot extends Model
         'schedule_template_id',
         'program_id', 'level_id', 'instructor_id', 'instructor_id_2', 'lane_id',
         'weekday', 'start_time', 'duration_min', 'active', 'source',
+        'effective_from', 'effective_to',
     ];
 
-    protected $casts = ['active' => 'boolean'];
+    protected $casts = [
+        'active'         => 'boolean',
+        'effective_from' => 'date',
+        'effective_to'   => 'date',
+    ];
 
     public function template()    { return $this->belongsTo(ScheduleTemplate::class, 'schedule_template_id'); }
     public function program()     { return $this->belongsTo(Program::class); }

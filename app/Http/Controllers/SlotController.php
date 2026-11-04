@@ -6,7 +6,6 @@ use App\Http\Requests\SlotRequest;
 use App\Models\Member;
 use App\Models\Program;
 use App\Models\ScheduleSlot;
-use App\Models\ScheduleTemplate;
 use App\Services\ConflictDetector;
 use App\Services\SessionGenerator;
 use Carbon\Carbon;
@@ -18,12 +17,7 @@ class SlotController extends Controller
     {
         $data = $request->validated();
         $memberIds = $data['member_ids'] ?? [];
-        unset($data['member_ids']);
-
-        // Resolver la plantilla del mes indicado (o el actual) y colgar el slot.
-        $monthRef = $this->monthRef($data['month'] ?? null);
-        $template = ScheduleTemplate::resolveFor($monthRef);
-        unset($data['month']);
+        unset($data['member_ids'], $data['month']);
 
         // Duración por defecto: la del NIVEL si se eligió, si no la del programa.
         if (empty($data['duration_min'])) {
@@ -31,12 +25,18 @@ class SlotController extends Controller
             $data['duration_min'] = $level?->duration_min ?? Program::find($data['program_id'])?->duration_min ?? 30;
         }
 
-        $slot = $template->slots()->create($data + ['active' => true]);
+        // Horario "para siempre": la clase recurrente nace vigente DESDE HOY y
+        // sin fin (effective_to = null). Ya no se cuelga de una plantilla mensual.
+        $slot = ScheduleSlot::create($data + [
+            'active'         => true,
+            'source'         => 'base',
+            'effective_from' => Carbon::now()->startOfDay()->toDateString(),
+            'effective_to'   => null,
+        ]);
 
-        // Materializar YA las sesiones del slot: desde el inicio de la semana
-        // actual (o del mes, si el mes es futuro) hasta fin del mes de la
-        // plantilla. Así la clase aparece de inmediato esta semana y siguientes.
-        $this->generateSlotSessions($slot, $monthRef, $generator);
+        // Materializar YA el horizonte (esta semana y las próximas ~8), para que
+        // la clase aparezca de inmediato y siga apareciendo semana a semana.
+        $generator->generateForSlotForward($slot);
 
         // Roster inicial elegido en el modal: se aplica a la serie y a las
         // sesiones ya generadas.
@@ -44,8 +44,8 @@ class SlotController extends Controller
             $enroller->syncSlotRoster($slot, $memberIds);
         }
 
-        return redirect()->route('schedule.template', ['month' => $template->key_month])
-            ->with('ok', 'Clase agregada a la plantilla de ' . $template->display_label . '.')
+        return redirect()->route('schedule.template')
+            ->with('ok', 'Clase agregada al horario base (se repite cada semana).')
             ->with('warnings', $this->slotWarnings($slot, $detector));
     }
 
@@ -62,63 +62,31 @@ class SlotController extends Controller
 
         $slot->update($data);
 
-        // Generar las sesiones futuras del slot editado (las ya existentes no se
+        // Generar el horizonte del slot editado (las sesiones ya existentes no se
         // tocan: respetan is_modified y la deduplicación por slot+fecha).
-        $monthRef = $slot->template
-            ? Carbon::create($slot->template->year, $slot->template->month, 1)
-            : Carbon::now();
-        $this->generateSlotSessions($slot, $monthRef, $generator);
+        $generator->generateForSlotForward($slot);
 
         // El modal envía member_ids (precargado con el roster actual): sincroniza.
         if ($hasMembers) {
             $enroller->syncSlotRoster($slot, $memberIds);
         }
 
-        return redirect()->route('schedule.template', ['month' => $slot->template?->key_month])
+        return redirect()->route('schedule.template')
             ->with('ok', 'Clase actualizada.')
             ->with('warnings', $this->slotWarnings($slot, $detector));
     }
 
     public function destroy(ScheduleSlot $slot)
     {
-        $month = $slot->template?->key_month;
         // Baja lógica del slot: deja de generar sesiones, conserva el histórico.
-        $slot->update(['active' => false]);
+        // Se "cierra" la vigencia a hoy para no borrar lo ya impartido.
+        $slot->update([
+            'active'       => false,
+            'effective_to' => Carbon::now()->startOfDay()->toDateString(),
+        ]);
 
-        return redirect()->route('schedule.template', ['month' => $month])
-            ->with('ok', 'Clase quitada de la plantilla.');
-    }
-
-    /** 'YYYY-MM' -> Carbon (día 1); default: hoy. */
-    private function monthRef(?string $month): Carbon
-    {
-        if ($month && preg_match('/^\d{4}-\d{2}$/', $month)) {
-            return Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
-        }
-        return Carbon::now()->startOfMonth();
-    }
-
-    /**
-     * Materializa las sesiones de un slot para que aparezca de inmediato:
-     * desde el MÁXIMO entre (inicio de la semana actual) y (inicio del mes de la
-     * plantilla), hasta el fin de ese mes. Un slot del mes actual se llena desde
-     * esta semana (aunque sea a mitad de semana); uno de un mes futuro llena todo
-     * ese mes.
-     */
-    private function generateSlotSessions(ScheduleSlot $slot, Carbon $monthRef, SessionGenerator $generator): void
-    {
-        $monthStart = $monthRef->copy()->startOfMonth();
-        $monthEnd   = $monthRef->copy()->endOfMonth();
-        $weekStart  = Carbon::now()->startOfWeek(Carbon::MONDAY);
-
-        $from = $weekStart->greaterThan($monthStart) ? $weekStart : $monthStart;
-
-        // Si el mes ya pasó por completo, no hay nada que generar.
-        if ($from->greaterThan($monthEnd)) {
-            return;
-        }
-
-        $generator->generateForSlot($slot, $from, $monthEnd);
+        return redirect()->route('schedule.template')
+            ->with('ok', 'Clase quitada del horario base.');
     }
 
     /** Gestionar el roster recurrente del slot. */
@@ -147,7 +115,7 @@ class SlotController extends Controller
         // generadas (antes solo se reflejaba al regenerar / el mes siguiente).
         $enroller->syncSlotRoster($slot, $validated['member_ids'] ?? []);
 
-        return redirect()->route('schedule.template', ['month' => $slot->template?->key_month])
+        return redirect()->route('schedule.template')
             ->with('ok', 'Roster actualizado. Se aplicó a esta semana y las próximas.');
     }
 

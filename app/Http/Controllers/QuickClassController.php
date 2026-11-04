@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ClassSession;
 use App\Models\Program;
-use App\Models\ScheduleTemplate;
+use App\Models\ScheduleSlot;
 use App\Services\EnrollmentService;
 use App\Services\SessionGenerator;
 use Carbon\Carbon;
@@ -13,8 +13,8 @@ use Illuminate\Http\Request;
 /**
  * Alta rápida de clase desde el calendario (clic en un hueco, estilo Google
  * Calendar). Un solo endpoint que, según el alcance:
- *   - weekly: crea un slot recurrente en la plantilla del mes de esa fecha
- *             (se repite cada semana) y materializa sus sesiones.
+ *   - weekly: crea un slot recurrente "para siempre" (vigente desde esa fecha,
+ *             sin fin) y materializa el horizonte de sesiones.
  *   - once:   crea UNA sola sesión fechada (sin slot), marcada is_modified
  *             para que el generador semanal nunca la toque.
  */
@@ -45,28 +45,25 @@ class QuickClassController extends Controller
         $memberIds = $data['member_ids'] ?? [];
 
         if ($data['scope'] === 'weekly') {
-            $template = ScheduleTemplate::resolveFor($date);
-            $slot = $template->slots()->create([
+            // Horario "para siempre": vigente desde la fecha elegida, sin fin.
+            $slot = ScheduleSlot::create([
                 'program_id'      => $data['program_id'],
                 'level_id'        => $data['level_id'] ?? null,
                 'instructor_id'   => $data['instructor_id'] ?? null,
                 'instructor_id_2' => $data['instructor_id_2'] ?? null,
                 'lane_id'         => $data['lane_id'] ?? null,
                 'weekday'         => $date->isoWeekday(),
-                'start_time'    => $data['start_time'],
-                'duration_min'  => $dur,
-                'active'        => true,
+                'start_time'      => $data['start_time'],
+                'duration_min'    => $dur,
+                'active'          => true,
+                'source'          => 'base',
+                'effective_from'  => $date->copy()->startOfDay()->toDateString(),
+                'effective_to'    => null,
             ]);
 
-            // Materializar desde la semana actual (o el inicio del mes) hasta fin
-            // de mes, para que aparezca de inmediato.
-            $monthStart = $date->copy()->startOfMonth();
-            $monthEnd   = $date->copy()->endOfMonth();
-            $weekStart  = Carbon::now()->startOfWeek(Carbon::MONDAY);
-            $from = $weekStart->greaterThan($monthStart) ? $weekStart : $monthStart;
-            if ($from->lte($monthEnd)) {
-                $generator->generateForSlot($slot, $from, $monthEnd);
-            }
+            // Materializar el horizonte (esta semana y las próximas), para que
+            // aparezca de inmediato y siga apareciendo.
+            $generator->generateForSlotForward($slot);
 
             if ($memberIds) {
                 $enroller->syncSlotRoster($slot, $memberIds);

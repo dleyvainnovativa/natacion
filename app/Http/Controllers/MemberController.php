@@ -6,22 +6,26 @@ use App\Http\Requests\MemberRequest;
 use App\Models\Member;
 use App\Models\MembershipType;
 use App\Models\ScheduleSlot;
-use App\Models\ScheduleTemplate;
 use App\Services\EnrollmentService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class MemberController extends Controller
 {
-    /** Slots activos de la plantilla del mes actual, con cupo ocupado. */
+    /**
+     * Clases recurrentes activas y VIGENTES hoy (horario "para siempre"), con el
+     * cupo ocupado. Es la lista para inscribir socios.
+     */
     private function currentMonthSlots()
     {
-        $template = ScheduleTemplate::resolveFor(Carbon::now());
+        $today = Carbon::now()->toDateString();
 
-        return ScheduleSlot::with(['program', 'lane', 'instructor'])
+        return ScheduleSlot::with(['program', 'lane', 'instructor', 'level'])
             ->withCount('members')
-            ->where('schedule_template_id', $template->id)
             ->where('active', true)
+            ->whereDate('effective_from', '<=', $today)
+            ->where(fn ($q) => $q->whereNull('effective_to')
+                ->orWhereDate('effective_to', '>=', $today))
             ->orderBy('weekday')->orderBy('start_time')
             ->get();
     }

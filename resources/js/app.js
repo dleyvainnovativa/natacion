@@ -823,7 +823,7 @@ function openSlotActions(cardEl) {
     const actions = [
         { icon: 'fa-pen', label: 'Editar clase (programa, día, hora…)', fn: () => { closePopover(); openSlotEdit(d); } },
         { icon: 'fa-user-group', label: 'Editar roster', fn: () => { closePopover(); window.location.href = d.rosterUrl; } },
-        { icon: 'fa-trash', label: 'Quitar de la plantilla', danger: true, fn: () => { closePopover(); deleteSlot(d.destroyUrl); } },
+        { icon: 'fa-trash', label: 'Quitar del horario base', danger: true, fn: () => { closePopover(); deleteSlot(d.destroyUrl); } },
     ];
 
     buildPopover(cardEl, title, sub, actions);
@@ -897,7 +897,7 @@ Object.assign(window.SF, { filterSlotMembers, updateSlotRosterCount });
 
 /** Enviar el form oculto de borrado al endpoint del slot. */
 function deleteSlot(destroyUrl) {
-    if (!confirm('¿Quitar esta clase de la plantilla?')) return;
+    if (!confirm('¿Quitar esta clase del horario base?')) return;
     const f = document.getElementById('slotDeleteForm');
     if (!f) return;
     f.action = destroyUrl;
@@ -1047,7 +1047,7 @@ function applyTypeToPicker(picker, sel) {
     });
 
     if (!prog) { if (hint) hint.textContent = 'Elige un tipo de socio para ver y sugerir sus clases.'; return; }
-    if (!shown) { if (hint) hint.textContent = 'No hay clases de ese programa en la plantilla del mes.'; return; }
+    if (!shown) { if (hint) hint.textContent = 'No hay clases de ese programa en el horario base.'; return; }
 
     // Pre-marcar la clase más temprana de cada día sugerido.
     const pattern = ENROLL_PATTERN[days] || [];
