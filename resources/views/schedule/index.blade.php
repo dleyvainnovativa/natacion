@@ -47,6 +47,14 @@
     @if (session('ok'))
         <div class="alert alert-success py-2">{{ session('ok') }}</div>
     @endif
+    @if (session('warnings') && count(session('warnings')))
+        <div class="alert alert-warning py-2">
+            <strong>Avisos de conflicto:</strong>
+            <ul class="mb-0 small">
+                @foreach (session('warnings') as $w) <li>{{ $w }}</li> @endforeach
+            </ul>
+        </div>
+    @endif
 
     {{-- Barra de filtros --}}
     <form method="GET" class="filter-bar app-card mb-3">

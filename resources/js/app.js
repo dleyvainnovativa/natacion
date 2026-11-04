@@ -629,7 +629,7 @@ function buildActionSheet(title, sub, actions, opts = {}) {
                 num.textContent = m.socio ? `#${m.socio}` : '';
                 const nm = document.createElement('span');
                 nm.className = 'as-roster-name';
-                nm.textContent = m.name || '—';
+                nm.textContent = (m.name || '—') + (m.age != null ? ` · ${m.age} a` : '');
                 row.appendChild(num); row.appendChild(nm);
                 list.appendChild(row);
             });
@@ -747,7 +747,7 @@ function buildPopover(anchor, title, sub, actions, opts = {}) {
                 const num = document.createElement('span'); num.className = 'sf-pop-num mono';
                 num.textContent = m.socio ? `#${m.socio}` : '';
                 const nm = document.createElement('span'); nm.className = 'sf-pop-name';
-                nm.textContent = m.name || '—';
+                nm.textContent = (m.name || '—') + (m.age != null ? ` · ${m.age} a` : '');
                 row.appendChild(num); row.appendChild(nm);
                 list.appendChild(row);
             });

@@ -41,7 +41,17 @@
                         @php $att = $session->instructorAttendance; @endphp
                         <tr data-session="{{ $session->id }}">
                             <td class="ps-3 mono">{{ $session->starts_at->format('H:i') }}</td>
-                            <td class="small">{{ $session->program?->name }}</td>
+                            <td class="small">
+                                {{ $session->program?->name }}
+                                <div class="text-muted" style="font-size:.8em">
+                                    {{ $session->lane?->label ?? 'Sin carril' }}
+                                    @if (($session->collapsed_count ?? 1) > 1)
+                                        <span class="badge bg-secondary ms-1" title="Se agruparon {{ $session->collapsed_count }} registros del mismo carril y hora">
+                                            +{{ $session->collapsed_count - 1 }}
+                                        </span>
+                                    @endif
+                                </div>
+                            </td>
                             <td class="small">
                                 {{ $session->scheduledInstructor?->name ?? '—' }}
                                 @if ($session->instructor2)

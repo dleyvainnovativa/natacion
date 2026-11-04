@@ -57,6 +57,14 @@
             </div>
 
             <div class="col-md-6">
+                <label class="form-label small">Fecha de nacimiento</label>
+                <input type="date" name="birth_date" class="form-control"
+                       value="{{ old('birth_date', $member->birth_date?->format('Y-m-d')) }}">
+                @if ($member->age() !== null)
+                    <div class="form-text">Edad: {{ $member->age() }} años</div>
+                @endif
+            </div>
+            <div class="col-md-6">
                 <label class="form-label small">Teléfono</label>
                 <input type="text" name="phone" class="form-control"
                        value="{{ old('phone', $member->phone) }}">

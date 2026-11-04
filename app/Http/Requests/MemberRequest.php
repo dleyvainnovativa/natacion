@@ -24,6 +24,7 @@ class MemberRequest extends FormRequest
             'first_name'         => ['required', 'string', 'max:120'],
             'last_name_1'        => ['required', 'string', 'max:120'],
             'last_name_2'        => ['nullable', 'string', 'max:120'],
+            'birth_date'         => ['nullable', 'date', 'before:today'],
             'phone'              => ['nullable', 'string', 'max:30'],
             'email'              => ['nullable', 'email', 'max:180'],
             'membership_type_id' => ['nullable', 'exists:membership_types,id'],

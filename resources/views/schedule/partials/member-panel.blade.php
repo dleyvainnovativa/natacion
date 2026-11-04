@@ -17,7 +17,7 @@
                  data-member-id="{{ $m['id'] }}"
                  data-text="{{ mb_strtolower($m['name'] . ' ' . $m['socio']) }}">
                 <span class="mp-grip"><i class="fa-solid fa-grip-vertical"></i></span>
-                <span class="mp-name">{{ $m['name'] }}</span>
+                <span class="mp-name">{{ $m['name'] }}@if (($m['age'] ?? null) !== null)<span class="text-muted"> · {{ $m['age'] }} a</span>@endif</span>
                 <span class="mp-count {{ $m['count'] ? '' : 'is-zero' }}"
                       title="Clases esta semana">{{ $m['count'] }}</span>
             </div>

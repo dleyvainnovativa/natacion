@@ -82,6 +82,9 @@
                                 <a href="{{ route('members.show', $member) }}" class="text-decoration-none fw-500">
                                     {{ $member->fullName() }}
                                 </a>
+                                @if ($member->age() !== null)
+                                    <div class="small text-muted">{{ $member->age() }} años</div>
+                                @endif
                             </td>
                             <td class="small">
                                 {{ $member->membershipType?->raw_label ?? '—' }}

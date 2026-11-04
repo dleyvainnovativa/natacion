@@ -98,7 +98,7 @@ class SlotController extends Controller
 
         return view('schedule.roster', [
             'slot'    => $slot,
-            'members' => Member::orderBy('last_name_1')->orderBy('first_name')->get(['id', 'first_name', 'last_name_1', 'last_name_2', 'socio_number']),
+            'members' => Member::orderBy('last_name_1')->orderBy('first_name')->get(['id', 'first_name', 'last_name_1', 'last_name_2', 'socio_number', 'birth_date']),
         ]);
     }
 

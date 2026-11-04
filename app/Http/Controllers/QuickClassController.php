@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ClassSession;
 use App\Models\Program;
 use App\Models\ScheduleSlot;
+use App\Services\ConflictDetector;
 use App\Services\EnrollmentService;
 use App\Services\SessionGenerator;
 use Carbon\Carbon;
@@ -20,7 +21,7 @@ use Illuminate\Http\Request;
  */
 class QuickClassController extends Controller
 {
-    public function store(Request $request, SessionGenerator $generator, EnrollmentService $enroller)
+    public function store(Request $request, SessionGenerator $generator, EnrollmentService $enroller, ConflictDetector $detector)
     {
         $this->authorize('move-classes');
 
@@ -43,6 +44,18 @@ class QuickClassController extends Controller
         // Duración: la del nivel si se eligió, si no la del programa.
         $dur  = $data['duration_min'] ?? $level?->duration_min ?? Program::find($data['program_id'])?->duration_min ?? 30;
         $memberIds = $data['member_ids'] ?? [];
+
+        // Avisos de choque (mismo carril / instructor / cupo / socio a esa hora).
+        // Nunca bloquea: se muestran y la clase se crea igual.
+        $warnings = $detector->check([
+            'id'            => null,
+            'starts_at'     => $date->copy()->setTimeFromTimeString($data['start_time']),
+            'duration_min'  => $dur,
+            'lane_id'       => $data['lane_id'] ?? null,
+            'instructor_id' => $data['instructor_id'] ?? null,
+            'program_id'    => $data['program_id'],
+            'member_ids'    => $memberIds,
+        ]);
 
         if ($data['scope'] === 'weekly') {
             // Horario "para siempre": vigente desde la fecha elegida, sin fin.
@@ -92,6 +105,6 @@ class QuickClassController extends Controller
             $msg = 'Clase creada sólo para este día.';
         }
 
-        return back()->with('ok', $msg);
+        return back()->with('ok', $msg)->with('warnings', $warnings);
     }
 }

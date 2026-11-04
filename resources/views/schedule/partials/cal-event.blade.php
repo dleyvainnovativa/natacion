@@ -3,55 +3,61 @@
      Variables: $s (ClassSession con program/lane/actualInstructor/members),
      $pxPerMin, $startMin. --}}
 @php
-    $mins   = $s->starts_at->hour * 60 + $s->starts_at->minute;
-    $top    = ($mins - $startMin) * $pxPerMin;
-    $dur    = $s->duration_min;
-    $h      = max(34, $dur * $pxPerMin);
-    $color  = $s->program?->color ?? 'teal';
-    $subbed = $s->actual_instructor_id && $s->actual_instructor_id !== $s->scheduled_instructor_id;
-    $cap    = $s->program?->lane_capacity ?? 0;
-    $count  = $s->members->count();
-    $full   = $cap && $count >= $cap;
-    $names  = $s->members
-        ->map(fn ($m) => trim(($m->first_name ?? '') . ' ' . ($m->last_name_1 ?? '')))
-        ->filter()->values();
-    // Cuántas líneas de nombre caben: alto menos cabecera (~42px, +12 si hay nivel), ~12px/línea.
-    $headPx   = 42 + ($s->level ? 12 : 0);
-    $maxLines = (int) floor(max(0, $h - $headPx) / 12);
-    if ($names->count() <= $maxLines) {
-        $show  = $names;            // caben todos
-        $extra = 0;
+$mins = $s->starts_at->hour * 60 + $s->starts_at->minute;
+$top = ($mins - $startMin) * $pxPerMin;
+$dur = $s->duration_min;
+$h = max(34, $dur * $pxPerMin);
+$color = $s->program?->color ?? 'teal';
+$subbed = $s->actual_instructor_id && $s->actual_instructor_id !== $s->scheduled_instructor_id;
+$cap = $s->program?->lane_capacity ?? 0;
+$count = $s->members->count();
+$full = $cap && $count >= $cap;
+$names = $s->members
+->map(function ($m) {
+$n = trim(($m->first_name ?? '') . ' ' . ($m->last_name_1 ?? ''));
+if ($n === '') return null;
+$age = $m->age();
+return $age !== null ? "{$n} ({$age})" : $n;
+})
+->filter()->values();
+// Cuántas líneas de nombre caben: alto menos cabecera (~42px, +12 si hay nivel), ~12px/línea.
+$headPx = 42 + ($s->level ? 12 : 0);
+$maxLines = (int) floor(max(0, $h - $headPx) / 12);
+if ($names->count() <= $maxLines) {
+    $show=$names; // caben todos
+    $extra=0;
     } else {
-        $show  = $names->take(max(0, $maxLines - 1));  // deja una línea para "+N más"
-        $extra = $names->count() - $show->count();
+    $show=$names->take(max(0, $maxLines - 1)); // deja una línea para "+N más"
+    $extra = $names->count() - $show->count();
     }
-@endphp
-<div class="dc-event chip-{{ $color }} {{ $s->status === 'cancelled' ? 'is-cancelled' : '' }}"
-     style="top: {{ $top }}px; height: {{ $h }}px"
-     data-session-id="{{ $s->id }}"
-     data-duration="{{ $dur }}"
-     data-starts="{{ $s->starts_at->format('Y-m-d\TH:i') }}"
-     data-lane="{{ $s->lane_id }}"
-     data-instructor="{{ $s->scheduled_instructor_id }}"
-     title="{{ $s->starts_at->format('H:i') }} · {{ $s->program?->name }} · {{ $s->actualInstructor?->name ?? '—' }} · {{ $count }} alumnos">
-    <div class="dc-ev-top">
-        <span class="dc-event-time mono">{{ $s->starts_at->format('H:i') }}</span>
-        <span class="dc-ev-count {{ $full ? 'is-full' : '' }}">{{ $count }}@if ($cap)/{{ $cap }}@endif</span>
-    </div>
-    <div class="dc-event-title">{{ $s->program?->name ?? 'Clase' }}</div>
-    @if ($s->level)
-    <div class="dc-ev-level">{{ $s->level->name }}</div>
-    @endif
-    <div class="dc-ev-inst"><i class="fa-solid {{ $s->instructor2 ? 'fa-user-group' : 'fa-user' }}"></i> {{ $s->actualInstructor?->name ?? '—' }}
-    @if ($subbed) 
-    <span class="badge-role">supl.</span>@endif
-    @if ($s->instructor2) + {{ $s->instructor2->name }}
-    @endif
-</div>
-    @if($maxLines > 0 && $names->count())
+    @endphp
+    <div class="dc-event chip-{{ $color }} {{ $s->status === 'cancelled' ? 'is-cancelled' : '' }}"
+        style="top: {{ $top }}px; height: {{ $h }}px"
+        data-session-id="{{ $s->id }}"
+        data-duration="{{ $dur }}"
+        data-starts="{{ $s->starts_at->format('Y-m-d\TH:i') }}"
+        data-lane="{{ $s->lane_id }}"
+        data-instructor="{{ $s->scheduled_instructor_id }}"
+        title="{{ $s->starts_at->format('H:i') }} · {{ $s->program?->name }} · {{ $s->actualInstructor?->name ?? '—' }} · {{ $count }} alumnos">
+        <div class="dc-ev-top">
+            <span class="dc-event-time mono">{{ $s->starts_at->format('H:i') }}</span>
+            <span class="dc-ev-count {{ $full ? 'is-full' : '' }}">{{ $count }}@if ($cap)/{{ $cap }}@endif</span>
+        </div>
+        <div class="dc-event-title">{{ $s->program?->name ?? 'Clase' }}</div>
+        @if ($s->level)
+        <div class="dc-ev-level">{{ $s->level->name }}</div>
+        @endif
+        <div class="dc-ev-inst"><i class="fa-solid {{ $s->instructor2 ? 'fa-user-group' : 'fa-user' }}"></i> {{ $s->actualInstructor?->name ?? '—' }}
+            @if ($subbed)
+            <span class="badge-role">supl.</span>
+            @endif
+            @if ($s->instructor2) + {{ $s->instructor2->name }}
+            @endif
+        </div>
+        @if($maxLines > 0 && $names->count())
         <ul class="dc-ev-members">
             @foreach ($show as $n)<li>{{ $n }}</li>@endforeach
             @if ($extra > 0)<li class="more">+{{ $extra }} más</li>@endif
         </ul>
-    @endif
-</div>
+        @endif
+    </div>

@@ -43,11 +43,12 @@ class ScheduleController extends Controller
             ->pluck('c', 'session_members.member_id');
 
         return Member::orderBy('last_name_1')->orderBy('first_name')
-            ->get(['id', 'first_name', 'last_name_1', 'last_name_2', 'socio_number'])
+            ->get(['id', 'first_name', 'last_name_1', 'last_name_2', 'socio_number', 'birth_date'])
             ->map(fn ($m) => [
                 'id'    => $m->id,
                 'name'  => trim("$m->first_name $m->last_name_1"),
                 'socio' => $m->socio_number,
+                'age'   => $m->age(),
                 'count' => (int) ($counts[$m->id] ?? 0),
             ])->values()->all();
     }
@@ -89,7 +90,7 @@ class ScheduleController extends Controller
                 'actualInstructor',
                 'scheduledInstructor',
                 'instructor2:id,name',
-                'members:id,socio_number,first_name,last_name_1'
+                'members:id,socio_number,first_name,last_name_1,birth_date'
             ])
             ->orderBy('starts_at')
             ->get();
@@ -159,7 +160,7 @@ class ScheduleController extends Controller
                 'actualInstructor',
                 'scheduledInstructor',
                 'instructor2:id,name',
-                'members:id,socio_number,first_name,last_name_1'
+                'members:id,socio_number,first_name,last_name_1,birth_date'
             ])
             ->orderBy('starts_at')
             ->get();
@@ -239,6 +240,7 @@ class ScheduleController extends Controller
                         'id'    => (string) $m->id,
                         'socio' => $m->socio_number,
                         'name'  => trim(($m->first_name ?? '') . ' ' . ($m->last_name_1 ?? '')) ?: ('Socio #' . $m->id),
+                        'age'   => $m->age(),
                     ])->values()->all(),
             ];
         })->values()->all();

@@ -34,7 +34,7 @@
                 class="form-check-input mt-0"
                 @checked($assigned->has($m->id))>
             <span class="mono small text-muted" style="width:56px">{{ $m->socio_number }}</span>
-            <span class="small">{{ trim("$m->first_name $m->last_name_1 $m->last_name_2") }}</span>
+            <span class="small">{{ trim("$m->first_name $m->last_name_1 $m->last_name_2") }}@if ($m->age() !== null)<span class="text-muted"> · {{ $m->age() }} a</span>@endif</span>
         </label>
         @endforeach
     </div>

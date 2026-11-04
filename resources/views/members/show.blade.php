@@ -28,6 +28,14 @@
             <div class="app-card p-4 h-100">
                 <h2 class="h6 text-muted mb-3">Datos</h2>
                 <dl class="row mb-0 small">
+                    <dt class="col-5 text-muted fw-normal">Nacimiento</dt>
+                    <dd class="col-7">
+                        {{ $member->birth_date?->format('d/m/Y') ?? '—' }}
+                        @if ($member->age() !== null)
+                            <span class="text-muted">({{ $member->age() }} años)</span>
+                        @endif
+                    </dd>
+
                     <dt class="col-5 text-muted fw-normal">Tipo de socio</dt>
                     <dd class="col-7">{{ $member->membershipType?->raw_label ?? '—' }}</dd>
 

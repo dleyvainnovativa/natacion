@@ -11,12 +11,22 @@ class Member extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'socio_number', 'last_name_1', 'last_name_2', 'first_name',
+        'socio_number', 'last_name_1', 'last_name_2', 'first_name', 'birth_date',
         'phone', 'email', 'membership_type_id', 'next_billing_date',
         'status', 'fee', 'notes',
     ];
 
-    protected $casts = ['next_billing_date' => 'date', 'fee' => 'decimal:2'];
+    protected $casts = [
+        'next_billing_date' => 'date',
+        'birth_date'        => 'date',
+        'fee'               => 'decimal:2',
+    ];
+
+    /** Edad en años cumplidos, o null si no hay fecha de nacimiento. */
+    public function age(): ?int
+    {
+        return $this->birth_date ? (int) $this->birth_date->age : null;
+    }
 
     public function membershipType() { return $this->belongsTo(MembershipType::class); }
     public function sessions()       { return $this->belongsToMany(ClassSession::class, 'session_members'); }

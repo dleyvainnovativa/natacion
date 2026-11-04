@@ -31,6 +31,23 @@ class InstructorAttendanceController extends Controller
             ->orderBy('starts_at')
             ->get();
 
+        // Colapsar por CARRIL + HORA: si quedaron varias sesiones en el mismo
+        // carril a la misma hora (duplicados), se muestra una sola fila. Se marca
+        // la asistencia sobre esa fila representativa. Las clases sin carril no se
+        // colapsan (cada una conserva su fila).
+        $sessions = $sessions
+            ->groupBy(fn (ClassSession $s) => $s->lane_id === null
+                ? 'nolane-' . $s->id
+                : $s->lane_id . '|' . $s->starts_at->format('Y-m-d H:i'))
+            ->map(function ($group) {
+                $rep = $group->sortBy('id')->first();
+                $rep->setAttribute('collapsed_count', $group->count());
+                return $rep;
+            })
+            ->values()
+            ->sortBy(fn (ClassSession $s) => $s->starts_at->timestamp)
+            ->values();
+
         return view('attendance.instructors.index', [
             'sessions'    => $sessions,
             'date'        => $date,
