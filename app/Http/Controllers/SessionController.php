@@ -19,14 +19,31 @@ class SessionController extends Controller
         $this->authorize('move-classes');
 
         $data = $request->validate([
-            'scope'         => ['required', 'in:date,series'],
-            'starts_at'     => ['required', 'date'],
-            'lane_id'       => ['nullable', 'exists:lanes,id'],
-            'instructor_id' => ['nullable', 'exists:instructors,id'],
-            'notes'         => ['nullable', 'string', 'max:500'],
+            'scope'           => ['required', 'in:date,series'],
+            'starts_at'       => ['required', 'date'],
+            'lane_id'         => ['nullable', 'exists:lanes,id'],
+            'instructor_id'   => ['nullable', 'exists:instructors,id'],
+            'instructor_id_2' => ['nullable', 'integer'],
+            'notes'           => ['nullable', 'string', 'max:500'],
         ]);
 
         $newStart = Carbon::parse($data['starts_at']);
+
+        // Segundo maestro (co-maestro) desde el calendario. El campo sólo llega
+        // cuando se pidió un cambio: '0' = quitar, un id = asignar. Se ignora si
+        // coincide con el instructor principal o si el id no existe.
+        $changeI2 = $request->has('instructor_id_2');
+        $newI2 = null;
+        if ($changeI2) {
+            $val = (int) $request->input('instructor_id_2');
+            $newI2 = $val > 0 ? $val : null;
+            $principal = (int) ($data['instructor_id'] ?? $session->scheduled_instructor_id);
+            if ($newI2 !== null && ($newI2 === $principal
+                || ! \App\Models\Instructor::whereKey($newI2)->exists())) {
+                $changeI2 = false;   // inválido: no tocar el co-maestro
+            }
+        }
+        $i2Extra = $changeI2 ? ['instructor_id_2' => $newI2] : [];
 
         $warnings = $detector->check([
             'id'            => $session->id,
@@ -47,7 +64,7 @@ class SessionController extends Controller
                 'start_time'    => $newStart->format('H:i'),
                 'lane_id'       => $data['lane_id'] ?? $slot->lane_id,
                 'instructor_id' => $data['instructor_id'] ?? $slot->instructor_id,
-            ]);
+            ] + $i2Extra);
             // Actualizar también esta sesión concreta para reflejarlo ya.
             $session->update([
                 'starts_at'               => $newStart,
@@ -55,7 +72,7 @@ class SessionController extends Controller
                 'scheduled_instructor_id' => $data['instructor_id'] ?? $session->scheduled_instructor_id,
                 'actual_instructor_id'    => $data['instructor_id'] ?? $session->actual_instructor_id,
                 'notes'                   => $data['notes'] ?? $session->notes,
-            ]);
+            ] + $i2Extra);
         } else {
             // Solo esta fecha: marcar como modificada para que el generador no
             // la pise.
@@ -66,7 +83,7 @@ class SessionController extends Controller
                 'actual_instructor_id'    => $data['instructor_id'] ?? $session->actual_instructor_id,
                 'notes'                   => $data['notes'] ?? $session->notes,
                 'is_modified'             => true,
-            ]);
+            ] + $i2Extra);
         }
 
         return response()->json([

@@ -35,6 +35,18 @@
                     </div>
                 </div>
 
+                <div class="mt-2">
+                    <label class="form-label small">Segundo maestro (co-maestro)</label>
+                    <select id="move-instructor-2" class="form-select">
+                        <option value="">Sin cambio</option>
+                        <option value="0">— Sin segundo maestro —</option>
+                        @foreach (\App\Models\Instructor::where('active', true)->orderBy('name')->get() as $i)
+                            <option value="{{ $i->id }}">{{ $i->name }}</option>
+                        @endforeach
+                    </select>
+                    <div class="form-text">Ambos cobran la clase completa.</div>
+                </div>
+
                 <div class="mb-3 mt-3">
                     <label class="form-label small">Nota (opcional)</label>
                     <input type="text" id="move-notes" class="form-control" placeholder="Motivo del cambio">

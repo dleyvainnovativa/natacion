@@ -38,6 +38,7 @@ if ($names->count() <= $maxLines) {
         data-starts="{{ $s->starts_at->format('Y-m-d\TH:i') }}"
         data-lane="{{ $s->lane_id }}"
         data-instructor="{{ $s->scheduled_instructor_id }}"
+        data-instructor2="{{ $s->instructor_id_2 }}"
         title="{{ $s->starts_at->format('H:i') }} · {{ $s->program?->name }} · {{ $s->actualInstructor?->name ?? '—' }} · {{ $count }} alumnos">
         <div class="dc-ev-top">
             <span class="dc-event-time mono">{{ $s->starts_at->format('H:i') }}</span>
@@ -54,10 +55,11 @@ if ($names->count() <= $maxLines) {
             @if ($s->instructor2) + {{ $s->instructor2->name }}
             @endif
         </div>
-        @if($maxLines > 0 && $names->count())
+        @if ($maxLines > 0 && $names->count())
         <ul class="dc-ev-members">
             @foreach ($show as $n)<li>{{ $n }}</li>@endforeach
-            @if ($extra > 0)<li class="more">+{{ $extra }} más</li>@endif
+            @if ($extra > 0)
+            <li class="more">+{{ $extra }} más</li>@endif
         </ul>
         @endif
     </div>

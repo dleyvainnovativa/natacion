@@ -110,6 +110,9 @@ function openMove(cardEl) {
 
     document.getElementById('move-lane').value = cardEl.dataset.lane || '';
     document.getElementById('move-instructor').value = cardEl.dataset.instructor || '';
+    // "Sin cambio" por defecto; el co-maestro actual se usa en el servidor si no se toca.
+    const i2 = document.getElementById('move-instructor-2');
+    if (i2) i2.value = '';
     document.getElementById('move-notes').value = '';
     document.getElementById('move-warnings').innerHTML = '';
     document.getElementById('scope-date').checked = true;
@@ -153,11 +156,14 @@ function renderWarnings(warnings) {
 async function submitMove() {
     if (!activeSessionId) return;
     const scope = document.querySelector('input[name="move-scope"]:checked')?.value || 'date';
+    // '' = sin cambio (no se envía); '0' = quitar co-maestro; id = asignar.
+    const i2 = document.getElementById('move-instructor-2')?.value ?? '';
     const payload = {
         ...collectMovePayload(),
         scope,
         notes: document.getElementById('move-notes').value || null,
     };
+    if (i2 !== '') payload.instructor_id_2 = i2;
     try {
         const res = await http.post(`/horario/sesiones/${activeSessionId}/mover`, payload);
         renderWarnings(res.warnings || []);
@@ -795,6 +801,7 @@ function openSessionActions(cardEl) {
     if (canMove) {
         actions.push({ icon: 'fa-arrows-up-down-left-right', label: 'Mover clase (fecha, carril, hora)', fn: () => { closePopover(); SF.openMove(cardEl); } });
         actions.push({ icon: 'fa-user-pen', label: 'Cambiar instructor', fn: () => { closePopover(); SF.openMove(cardEl); setTimeout(() => document.getElementById('move-instructor')?.focus(), 300); } });
+        actions.push({ icon: 'fa-user-group', label: 'Segundo maestro (co-maestro)', fn: () => { closePopover(); SF.openMove(cardEl); setTimeout(() => document.getElementById('move-instructor-2')?.focus(), 300); } });
     }
     if (canMoveMember) {
         actions.push({ icon: 'fa-user-group', label: 'Mover un socio de esta clase', fn: () => { closePopover(); SF.openMoveMember(sessionId); } });

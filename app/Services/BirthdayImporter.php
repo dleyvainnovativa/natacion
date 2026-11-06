@@ -34,7 +34,9 @@ class BirthdayImporter
         $result = ['matched' => 0, 'updated' => 0, 'not_found' => 0, 'skipped' => 0, 'errors' => []];
 
         $sheet = IOFactory::load($path)->getActiveSheet();
-        $rows  = $sheet->toArray(null, true, true, true); // claves A,B,C...
+        // formatData=false: las fechas llegan como serial de Excel (número), que
+        // parseamos de forma determinista; así no dependemos del formato de celda.
+        $rows  = $sheet->toArray(null, true, false, true); // claves A,B,C...
 
         [$headerRowIndex, $socioCol, $birthCol] = $this->locateColumns($rows);
 
@@ -63,7 +65,10 @@ class BirthdayImporter
                 continue;
             }
 
-            $socio = (int) preg_replace('/\D/', '', (string) $socioRaw);
+            // El número de socio puede venir como float (119.0) desde Excel.
+            $socio = is_numeric($socioRaw)
+                ? (int) round((float) $socioRaw)
+                : (int) preg_replace('/\D/', '', (string) $socioRaw);
             if ($socio <= 0) {
                 $result['skipped']++;
                 continue;
@@ -105,6 +110,8 @@ class BirthdayImporter
      */
     private function locateColumns(array $rows): array
     {
+        $fallback = [null, null, null];   // primer renglón con socio, por si no hay fecha
+
         foreach ($rows as $rowIndex => $row) {
             $socioCol = null;
             $birthCol = null;
@@ -126,13 +133,21 @@ class BirthdayImporter
                 }
             }
 
-            // Se considera encontrada la cabecera en cuanto aparece el socio.
-            if ($socioCol !== null) {
+            // El encabezado válido tiene AMBAS columnas en el mismo renglón. Esto
+            // evita que el título "Socios" (que contiene "socio") se tome como
+            // encabezado y deje la fecha sin encontrar.
+            if ($socioCol !== null && $birthCol !== null) {
                 return [$rowIndex, $socioCol, $birthCol];
+            }
+
+            // Recordar el primer renglón que sí trae socio, para dar un error
+            // claro ("falta la columna de fecha") si nunca aparecen las dos.
+            if ($socioCol !== null && $fallback[0] === null) {
+                $fallback = [$rowIndex, $socioCol, null];
             }
         }
 
-        return [null, null, null];
+        return $fallback;
     }
 
     private function matchesHint(string $norm, array $hints): bool
