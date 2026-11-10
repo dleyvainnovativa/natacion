@@ -76,17 +76,26 @@ class SlotController extends Controller
             ->with('warnings', $this->slotWarnings($slot, $detector));
     }
 
-    public function destroy(ScheduleSlot $slot)
+    public function destroy(ScheduleSlot $slot, SessionGenerator $generator)
     {
-        // Baja lógica del slot: deja de generar sesiones, conserva el histórico.
-        // Se "cierra" la vigencia a hoy para no borrar lo ya impartido.
+        // Baja lógica del slot: deja de generar sesiones y cierra la vigencia a
+        // hoy para no tocar lo ya impartido.
+        $today = Carbon::now()->startOfDay();
+
         $slot->update([
             'active'       => false,
-            'effective_to' => Carbon::now()->startOfDay()->toDateString(),
+            'effective_to' => $today->toDateString(),
         ]);
 
+        // Limpiar del calendario las sesiones FUTURAS ya materializadas de esta
+        // clase (de hoy en adelante) que NO tengan asistencia registrada. El
+        // histórico (pasadas, o con asistencia) se conserva.
+        $removed = $generator->pruneFutureForSlot($slot, $today);
+
         return redirect()->route('schedule.template')
-            ->with('ok', 'Clase quitada del horario base.');
+            ->with('ok', $removed
+                ? "Clase quitada del horario base. Se limpiaron {$removed} sesión(es) futura(s) del calendario."
+                : 'Clase quitada del horario base.');
     }
 
     /** Gestionar el roster recurrente del slot. */

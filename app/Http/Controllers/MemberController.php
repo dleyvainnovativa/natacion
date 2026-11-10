@@ -32,7 +32,15 @@ class MemberController extends Controller
 
     public function index(Request $request)
     {
+        // Filtro de registro: activos (default) | bajas | todos. Permite ver y
+        // reactivar socios dados de baja (soft delete).
+        $reg = in_array($request->query('reg'), ['bajas', 'todos'], true)
+            ? $request->query('reg')
+            : 'activos';
+
         $members = Member::query()
+            ->when($reg === 'bajas', fn ($q) => $q->onlyTrashed())
+            ->when($reg === 'todos', fn ($q) => $q->withTrashed())
             ->with('membershipType')
             ->search($request->string('q')->toString() ?: null)
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
@@ -41,9 +49,11 @@ class MemberController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        $statuses = Member::query()->distinct()->pluck('status')->filter()->values();
+        // Incluye bajas para que el select de Estado no pierda opciones al
+        // filtrar por "Dados de baja".
+        $statuses = Member::withTrashed()->distinct()->pluck('status')->filter()->values();
 
-        return view('members.index', compact('members', 'statuses'));
+        return view('members.index', compact('members', 'statuses', 'reg'));
     }
 
     public function create()
@@ -123,5 +133,19 @@ class MemberController extends Controller
 
         return redirect()->route('members.index')
             ->with('ok', 'Socio dado de baja.');
+    }
+
+    /** Reactiva (restaura) un socio dado de baja. */
+    public function reactivate(Member $member)
+    {
+        // El binding de la ruta usa withTrashed(): $member puede venir en baja.
+        if ($member->trashed()) {
+            $member->restore();
+            $msg = "Socio {$member->fullName()} reactivado.";
+        } else {
+            $msg = 'El socio ya estaba activo.';
+        }
+
+        return redirect()->route('members.index')->with('ok', $msg);
     }
 }

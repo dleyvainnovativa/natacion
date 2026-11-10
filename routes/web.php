@@ -80,6 +80,11 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin,coordinator,receptionist')->group(function () {
         Route::get('/socios/{member}/inscribir', [MemberController::class, 'enrollShow'])->name('members.enroll.show');
         Route::post('/socios/{member}/inscribir', [MemberController::class, 'enrollStore'])->name('members.enroll.store');
+
+        // Reactivar un socio dado de baja. withTrashed() para que el binding
+        // resuelva el socio en baja (soft delete).
+        Route::patch('/socios/{member}/reactivar', [MemberController::class, 'reactivate'])
+            ->name('members.reactivate')->withTrashed();
     });
 
     Route::resource('socios', MemberController::class)

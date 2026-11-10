@@ -37,12 +37,20 @@
     {{-- Búsqueda / filtro: GET simple, sin JS. --}}
     <form method="GET" class="app-card p-3 mb-3">
         <div class="row g-2 align-items-end">
-            <div class="col-md-6">
+            <div class="col-md-5">
                 <label class="form-label small mb-1">Buscar</label>
                 <input type="text" name="q" value="{{ request('q') }}"
                        class="form-control" placeholder="Nombre, apellido o número de socio">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Registro</label>
+                <select name="reg" class="form-select">
+                    <option value="activos" @selected($reg === 'activos')>Activos</option>
+                    <option value="bajas"   @selected($reg === 'bajas')>Dados de baja</option>
+                    <option value="todos"   @selected($reg === 'todos')>Todos</option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label class="form-label small mb-1">Estado</label>
                 <select name="status" class="form-select">
                     <option value="">Todos</option>
@@ -53,7 +61,7 @@
             </div>
             <div class="col-md-3 d-flex gap-2">
                 <button class="btn btn-brand flex-fill">Filtrar</button>
-                @if (request()->hasAny(['q', 'status']))
+                @if (request()->hasAny(['q', 'status']) || $reg !== 'activos')
                     <a href="{{ route('members.index') }}" class="btn btn-outline-secondary">Limpiar</a>
                 @endif
             </div>
@@ -82,6 +90,9 @@
                                 <a href="{{ route('members.show', $member) }}" class="text-decoration-none fw-500">
                                     {{ $member->fullName() }}
                                 </a>
+                                @if ($member->trashed())
+                                    <span class="badge bg-secondary ms-1">Baja</span>
+                                @endif
                                 @if ($member->age() !== null)
                                     <div class="small text-muted">{{ $member->age() }} años</div>
                                 @endif
@@ -97,23 +108,32 @@
                                 {{ $member->next_billing_date?->format('d/m/Y') ?? '—' }}
                             </td>
                             <td class="text-end pe-3">
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{{ route('members.enroll.show', $member) }}"
-                                       class="btn btn-soft" title="Inscribir a clases">
-                                        <i class="fa-regular fa-calendar-plus"></i>
-                                    </a>
-                                    <a href="{{ route('members.edit', $member) }}"
-                                       class="btn btn-outline-secondary" title="Editar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </a>
-                                </div>
+                                @if ($member->trashed())
+                                    <form method="POST" action="{{ route('members.reactivate', $member) }}" class="d-inline">
+                                        @csrf @method('PATCH')
+                                        <button class="btn btn-sm btn-soft" title="Reactivar socio">
+                                            <i class="fa-solid fa-rotate-left me-1"></i> Reactivar
+                                        </button>
+                                    </form>
+                                @else
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ route('members.enroll.show', $member) }}"
+                                           class="btn btn-soft" title="Inscribir a clases">
+                                            <i class="fa-regular fa-calendar-plus"></i>
+                                        </a>
+                                        <a href="{{ route('members.edit', $member) }}"
+                                           class="btn btn-outline-secondary" title="Editar">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </a>
+                                    </div>
+                                @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="7" class="text-center text-muted py-5">
                                 No se encontraron socios.
-                                @if (request()->hasAny(['q', 'status']))
+                                @if (request()->hasAny(['q', 'status']) || $reg !== 'activos')
                                     <a href="{{ route('members.index') }}">Ver todos</a>.
                                 @endif
                             </td>

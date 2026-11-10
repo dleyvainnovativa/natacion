@@ -145,6 +145,46 @@ class SessionGenerator
     }
 
     /**
+     * Elimina las sesiones FUTURAS (de $from en adelante) de un slot que NO
+     * tengan asistencia registrada. Se usa al quitar una clase del horario base:
+     * el calendario deja de mostrarla hacia adelante, pero el histórico y
+     * cualquier sesión con asistencia se conservan.
+     */
+    public function pruneFutureForSlot(ScheduleSlot $slot, ?Carbon $from = null): int
+    {
+        $from = ($from ?? Carbon::now()->startOfDay())->copy()->startOfDay();
+
+        $ids = ClassSession::where('schedule_slot_id', $slot->id)
+            ->where('starts_at', '>=', $from)
+            ->whereDoesntHave('memberAttendances')
+            ->whereDoesntHave('instructorAttendance')
+            ->pluck('id')
+            ->all();
+
+        return $this->deleteSessions($ids);
+    }
+
+    /**
+     * Borra sesiones por id junto con sus inscripciones (session_members). No
+     * toca asistencia porque sólo se invoca con sesiones sin asistencia.
+     *
+     * @param  array<int>  $ids
+     */
+    public function deleteSessions(array $ids): int
+    {
+        if (empty($ids)) {
+            return 0;
+        }
+
+        DB::transaction(function () use ($ids) {
+            DB::table('session_members')->whereIn('class_session_id', $ids)->delete();
+            ClassSession::whereIn('id', $ids)->delete();
+        });
+
+        return count($ids);
+    }
+
+    /**
      * Crea la sesión de $slot en la fecha $day si no existe ya. Devuelve los
      * contadores actualizados. NO abre transacción (la abre quien llama).
      *

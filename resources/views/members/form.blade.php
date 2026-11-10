@@ -17,6 +17,23 @@
         </div>
     @endif
 
+    {{-- Choque con un socio dado de baja: ofrecer reactivarlo en vez de crear
+         uno nuevo con el mismo número. --}}
+    @if (session('dup_member'))
+        <div class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2 py-2">
+            <span>
+                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                <strong>{{ session('dup_member')['name'] }}</strong> ya tiene ese número y está dado de baja.
+            </span>
+            <form method="POST" action="{{ route('members.reactivate', session('dup_member')['id']) }}" class="d-inline">
+                @csrf @method('PATCH')
+                <button class="btn btn-sm btn-brand">
+                    <i class="fa-solid fa-rotate-left me-1"></i> Reactivar a {{ session('dup_member')['name'] }}
+                </button>
+            </form>
+        </div>
+    @endif
+
     <form method="POST"
           action="{{ $member->exists ? route('members.update', $member) : route('members.store') }}"
           class="app-card p-4" style="max-width:760px">

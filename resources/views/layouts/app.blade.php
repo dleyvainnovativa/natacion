@@ -91,6 +91,22 @@
 
     <div id="toast-root" aria-live="polite" aria-atomic="true"></div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    {{-- Puente flash→toast: cualquier controlador puede ->with('toast', [[msg,type]]).
+         Espera a que SF.toast exista (app.js carga como módulo diferido). --}}
+    @if (session('toast'))
+        <script>
+            (function () {
+                var items = {!! \Illuminate\Support\Js::from(session('toast')) !!};
+                function go() {
+                    if (!window.SF || !window.SF.toast) { return setTimeout(go, 50); }
+                    items.forEach(function (t) { window.SF.toast(t.msg, t.type || 'success'); });
+                }
+                if (document.readyState !== 'loading') { go(); }
+                else { document.addEventListener('DOMContentLoaded', go); }
+            })();
+        </script>
+    @endif
 </body>
 
 </html>
