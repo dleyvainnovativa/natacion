@@ -18,6 +18,7 @@ class ScheduleSlot extends Model
         'active'         => 'boolean',
         'effective_from' => 'date',
         'effective_to'   => 'date',
+        'duration_min'   => 'integer',
     ];
 
     public function template()    { return $this->belongsTo(ScheduleTemplate::class, 'schedule_template_id'); }

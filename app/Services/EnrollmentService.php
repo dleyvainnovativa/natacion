@@ -103,6 +103,27 @@ class EnrollmentService
     }
 
     /**
+     * Quita a un socio de UNA clase recurrente (slot): lo saca del roster del slot
+     * y de sus sesiones futuras ya generadas. NO lo da de baja como socio, solo
+     * deja de aparecer en esa clase de hoy en adelante. El histórico se conserva.
+     */
+    public function unenrollSlot(Member $member, int $slotId): void
+    {
+        DB::transaction(function () use ($member, $slotId) {
+            $member->slotAssignments()->detach($slotId);
+
+            $sessionIds = ClassSession::where('schedule_slot_id', $slotId)
+                ->where('starts_at', '>=', Carbon::today()->startOfDay())
+                ->pluck('id');
+
+            DB::table('session_members')
+                ->where('member_id', $member->id)
+                ->whereIn('class_session_id', $sessionIds)
+                ->delete();
+        });
+    }
+
+    /**
      * Sincroniza EXACTAMENTE el set de slots de un socio: inscribe los nuevos y
      * quita los que ya no estén marcados (del roster recurrente y de sus
      * sesiones futuras). Se usa en la página "Inscribir a clases".

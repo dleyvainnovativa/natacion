@@ -94,13 +94,17 @@
 
                     <div class="d-flex flex-column gap-2 mb-3">
                         @forelse ($program->levels as $level)
-                            <div class="d-flex align-items-center gap-2">
-                                <form method="POST" action="{{ route('programs.levels.update', $level) }}"
-                                      class="d-flex align-items-center gap-2 flex-grow-1">
+                            <div class="lvl-row">
+                                <form method="POST" action="{{ route('programs.levels.update', $level) }}" class="flex-grow-1">
                                     @csrf @method('PUT')
-                                    <input type="text" name="name" value="{{ $level->name }}" class="form-control form-control-sm flex-grow-1" required>
-                                    <input type="number" name="duration_min" value="{{ $level->duration_min }}" class="form-control form-control-sm mono" style="width:72px" min="5" max="240" required>
-                                    <button class="btn btn-sm btn-soft" title="Guardar nombre/duración"><i class="fa-solid fa-check"></i></button>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="text" name="name" value="{{ $level->name }}" class="form-control form-control-sm flex-grow-1" required>
+                                        <input type="number" name="duration_min" value="{{ $level->duration_min }}" class="form-control form-control-sm mono" style="width:72px" min="5" max="240" required>
+                                        <button class="btn btn-sm btn-soft" title="Guardar nombre, duración y color"><i class="fa-solid fa-check"></i></button>
+                                    </div>
+                                    <div class="mt-2">
+                                        @include('programs.partials.tone-swatches', ['current' => $level->color])
+                                    </div>
                                 </form>
                                 <form method="POST" action="{{ route('programs.levels.destroy', $level) }}"
                                       onsubmit="return confirm('¿Eliminar este nivel?')">
@@ -121,6 +125,9 @@
                             <input type="text" name="name" class="form-control form-control-sm" placeholder="Nombre (p. ej. Torpedos)" required>
                             <input type="number" name="duration_min" class="form-control form-control-sm mono" style="width:76px" placeholder="min" min="5" max="240" required>
                             <button class="btn btn-sm btn-brand"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div class="mt-2">
+                            @include('programs.partials.tone-swatches', ['current' => old('color')])
                         </div>
                     </form>
                 </div>

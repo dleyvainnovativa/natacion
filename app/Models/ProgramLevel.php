@@ -11,7 +11,25 @@ use Illuminate\Database\Eloquent\Model;
  */
 class ProgramLevel extends Model
 {
-    protected $fillable = ['program_id', 'slug', 'name', 'duration_min', 'position', 'active'];
+    /**
+     * Paleta de 10 tonos para colorear el nivel en el calendario. La clave es la
+     * clase CSS (chip-<clave>, definida en theme.css); el valor es la etiqueta
+     * para la UI. Si el nivel no tiene color, el bloque usa el del programa.
+     */
+    public const TONES = [
+        'teal'   => 'Verde azulado',
+        'green'  => 'Verde',
+        'blue'   => 'Azul',
+        'cyan'   => 'Cian',
+        'violet' => 'Violeta',
+        'pink'   => 'Rosa',
+        'rose'   => 'Rojo suave',
+        'orange' => 'Naranja',
+        'amber'  => 'Ámbar',
+        'slate'  => 'Gris',
+    ];
+
+    protected $fillable = ['program_id', 'slug', 'name', 'color', 'duration_min', 'position', 'active'];
 
     protected $casts = [
         'duration_min' => 'integer',

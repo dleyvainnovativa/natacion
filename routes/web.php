@@ -85,6 +85,10 @@ Route::middleware('auth')->group(function () {
         // resuelva el socio en baja (soft delete).
         Route::patch('/socios/{member}/reactivar', [MemberController::class, 'reactivate'])
             ->name('members.reactivate')->withTrashed();
+
+        // Quitar a un socio de UNA clase recurrente (sin darlo de baja).
+        Route::delete('/socios/{member}/clases/{slot}', [MemberController::class, 'unenroll'])
+            ->name('members.unenroll');
     });
 
     Route::resource('socios', MemberController::class)

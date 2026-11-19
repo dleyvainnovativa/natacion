@@ -97,7 +97,7 @@
         // Escala idéntica a la vista de día. El JS lee --px-per-min del lienzo,
         // así que basta cambiarlo aquí. Subido a 1.6 para que quepan instructor
         // + conteo en cada bloque sin tener que abrir nada.
-        $pxPerMin = 1.6;
+        $pxPerMin = 2.0;
         $canvasH  = ($endMin - $startMin) * $pxPerMin;
         // Carriles a pintar por día: los reales + (si aplica) "sin carril" (id 0).
         $renderLanes = $lanes->map(fn ($l) => ['id' => $l->id, 'label' => $l->label])->all();

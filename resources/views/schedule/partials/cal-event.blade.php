@@ -7,7 +7,7 @@ $mins = $s->starts_at->hour * 60 + $s->starts_at->minute;
 $top = ($mins - $startMin) * $pxPerMin;
 $dur = $s->duration_min;
 $h = max(34, $dur * $pxPerMin);
-$color = $s->program?->color ?? 'teal';
+$color = $s->level?->color ?? $s->program?->color ?? 'teal';
 $subbed = $s->actual_instructor_id && $s->actual_instructor_id !== $s->scheduled_instructor_id;
 $cap = $s->program?->lane_capacity ?? 0;
 $count = $s->members->count();

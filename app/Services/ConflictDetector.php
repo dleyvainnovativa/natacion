@@ -40,7 +40,7 @@ class ConflictDetector
         $start = $proposal['starts_at'] instanceof Carbon
             ? $proposal['starts_at']
             : Carbon::parse($proposal['starts_at']);
-        $end = $start->copy()->addMinutes($proposal['duration_min']);
+        $end = $start->copy()->addMinutes((int) $proposal['duration_min']);
 
         // Sesiones del mismo día, excluyendo la propia y las canceladas.
         $sameDay = ClassSession::with('members:id', 'program:id,name,lane_capacity')
@@ -68,9 +68,10 @@ class ConflictDetector
 
         // 2. Instructor ocupado.
         if (! empty($proposal['instructor_id'])) {
+            $wantInstr = (int) $proposal['instructor_id'];
             $instrClash = $overlapping->first(fn (ClassSession $o) =>
-                $o->scheduled_instructor_id === $proposal['instructor_id']
-                || $o->actual_instructor_id === $proposal['instructor_id']
+                (int) $o->scheduled_instructor_id === $wantInstr
+                || (int) $o->actual_instructor_id === $wantInstr
             );
             if ($instrClash) {
                 $warnings[] = 'El instructor ya está asignado a otra clase a esa hora.';

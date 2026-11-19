@@ -85,7 +85,7 @@ class ScheduleController extends Controller
             ->where('status', '!=', 'cancelled')
             ->with([
                 'program',
-                'level:id,name',
+                'level:id,name,color',
                 'lane',
                 'actualInstructor',
                 'scheduledInstructor',
@@ -155,7 +155,7 @@ class ScheduleController extends Controller
             ->where('status', '!=', 'cancelled')
             ->with([
                 'program',
-                'level:id,name',
+                'level:id,name,color',
                 'lane',
                 'actualInstructor',
                 'scheduledInstructor',
@@ -197,13 +197,14 @@ class ScheduleController extends Controller
         $this->authorize('move-classes');
 
         // Horario base "para siempre": ya no hay meses. Se muestran las clases
-        // recurrentes activas y VIGENTES hoy (effective_from <= hoy y
-        // effective_to null o >= hoy).
+        // recurrentes activas cuya vigencia NO haya terminado (effective_to null
+        // o >= hoy). Incluye las que empiezan a futuro (effective_from > hoy):
+        // así una clase agendada para la próxima semana aparece de inmediato en
+        // plantilla, igual que ya aparece en el calendario. Se marca "desde DD/MM".
         $today = Carbon::now()->toDateString();
 
-        $slots = ScheduleSlot::with(['program', 'level:id,name', 'lane', 'instructor', 'instructor2:id,name', 'members:id'])
+        $slots = ScheduleSlot::with(['program', 'level:id,name,color', 'lane', 'instructor', 'instructor2:id,name', 'members:id'])
             ->where('active', true)
-            ->whereDate('effective_from', '<=', $today)
             ->where(fn ($q) => $q->whereNull('effective_to')
                 ->orWhereDate('effective_to', '>=', $today))
             ->orderBy('weekday')->orderBy('start_time')

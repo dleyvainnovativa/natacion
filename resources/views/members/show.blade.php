@@ -94,17 +94,32 @@
                     @endif
                 @endif
 
-                @if ($member->sessions->count())
+                @php
+                    $weekdayShort = [1 => 'Lun', 2 => 'Mar', 3 => 'Mié', 4 => 'Jue', 5 => 'Vie', 6 => 'Sáb', 7 => 'Dom'];
+                    $classes = $member->slotAssignments->sortBy([['weekday', 'asc'], ['start_time', 'asc']]);
+                @endphp
+                @if ($classes->count())
                     <ul class="list-unstyled small mb-0">
-                        @foreach ($member->sessions->take(10) as $s)
-                            <li class="d-flex justify-content-between py-1">
-                                <span>{{ $s->program?->name ?? 'Clase' }}</span>
-                                <span class="text-muted mono">{{ $s->starts_at?->format('d/m H:i') }}</span>
+                        @foreach ($classes as $slot)
+                            <li class="d-flex justify-content-between align-items-center py-1 border-bottom" style="border-color:var(--border)!important">
+                                <span>
+                                    <strong>{{ $weekdayShort[$slot->weekday] ?? '' }}
+                                        {{ \Illuminate\Support\Str::of((string) $slot->start_time)->substr(0,5) }}</strong>
+                                    · {{ $slot->program?->name ?? 'Clase' }}@if ($slot->level) <span class="text-muted">({{ $slot->level->name }})</span>@endif
+                                    · {{ $slot->lane?->label ?? 'Sin carril' }}
+                                </span>
+                                <form method="POST" action="{{ route('members.unenroll', [$member, $slot]) }}"
+                                      onsubmit="return confirm('¿Quitar al socio de esta clase? No se da de baja, solo deja de aparecer en esta clase.')">
+                                    @csrf @method('DELETE')
+                                    <button class="btn btn-sm btn-outline-danger" title="Quitar de esta clase">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </form>
                             </li>
                         @endforeach
                     </ul>
                 @else
-                    <p class="text-muted small mb-0">Sin clases asignadas todavía (se asignan en el horario).</p>
+                    <p class="text-muted small mb-0">Sin clases asignadas todavía (se asignan en "Inscribir a clases").</p>
                 @endif
             </div>
         </div>

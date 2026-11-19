@@ -36,7 +36,7 @@
                 <div class="schedule-col-head"><span class="fw-600">{{ $label }}</span></div>
                 <div class="schedule-col-body">
                     @forelse ($slots->get($iso, collect()) as $slot)
-                        <div class="session-card slot-card chip-{{ $slot->program?->color ?? 'teal' }}"
+                        <div class="session-card slot-card chip-{{ $slot->level?->color ?? $slot->program?->color ?? 'teal' }}"
                              role="button" tabindex="0"
                              onclick="SF.openSlotActions(this)"
                              onkeydown="if(event.key==='Enter'){SF.openSlotActions(this)}"
@@ -58,6 +58,9 @@
                                 <span class="mono small fw-600">{{ \Illuminate\Support\Str::of($slot->start_time)->substr(0,5) }}</span>
                                 <span class="small text-muted">{{ $slot->duration_min }}′</span>
                             </div>
+                            @if ($slot->effective_from && $slot->effective_from->isFuture())
+                                <div class="slot-future-badge">empieza {{ $slot->effective_from->format('d/m') }}</div>
+                            @endif
                             <div class="fw-600 small">{{ $slot->program?->name }}</div>
                             @if ($slot->level)<div class="small" style="color:var(--brand-teal-600)">{{ $slot->level->name }}</div>@endif
                             <div class="small text-muted">{{ $slot->lane?->label ?? 'Sin carril' }}</div>

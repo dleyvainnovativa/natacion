@@ -88,11 +88,13 @@ class ProgramController extends Controller
         $data = $request->validate([
             'name'         => ['required', 'string', 'max:120'],
             'duration_min' => ['required', 'integer', 'min:5', 'max:240'],
+            'color'        => ['nullable', 'in:' . implode(',', array_keys(ProgramLevel::TONES))],
         ]);
 
         $program->levels()->create([
             'slug'         => Str::slug($data['name']) . '-' . Str::lower(Str::random(4)),
             'name'         => $data['name'],
+            'color'        => $data['color'] ?? null,
             'duration_min' => $data['duration_min'],
             'position'     => ((int) $program->levels()->max('position')) + 1,
             'active'       => true,
@@ -108,6 +110,7 @@ class ProgramController extends Controller
         $level->update($request->validate([
             'name'         => ['required', 'string', 'max:120'],
             'duration_min' => ['required', 'integer', 'min:5', 'max:240'],
+            'color'        => ['nullable', 'in:' . implode(',', array_keys(ProgramLevel::TONES))],
         ]));
 
         return back()->with('ok', 'Nivel actualizado.');

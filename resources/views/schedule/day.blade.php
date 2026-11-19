@@ -5,7 +5,7 @@
     // Escala: 1 minuto = 1.6px. El JS lee --px-per-min del lienzo (fallback 1.2),
     // así que basta ajustarlo aquí. Subido para que el bloque muestre hora +
     // clase + instructor + conteo sin abrir nada.
-    $pxPerMin = 1.6;
+    $pxPerMin = 2.0;
     $totalMin = $endMin - $startMin;
     $canvasH  = $totalMin * $pxPerMin;
 @endphp

@@ -1,7 +1,7 @@
 {{-- Tarjeta de clase para la rejilla. Draggable (mover clase completa) y con
      botón para gestionar socios (mover socio individual). --}}
 @php
-    $color = $session->program?->color ?? 'teal';
+    $color = $session->level?->color ?? $session->program?->color ?? 'teal';
     $over  = $session->isOverCapacity();
     $subbed = $session->actual_instructor_id
            && $session->actual_instructor_id !== $session->scheduled_instructor_id;

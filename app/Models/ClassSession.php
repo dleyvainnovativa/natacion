@@ -15,8 +15,9 @@ class ClassSession extends Model
     ];
 
     protected $casts = [
-        'starts_at'   => 'datetime',
-        'is_modified' => 'boolean',
+        'starts_at'    => 'datetime',
+        'is_modified'  => 'boolean',
+        'duration_min' => 'integer',
     ];
 
     public function slot()                { return $this->belongsTo(ScheduleSlot::class, 'schedule_slot_id'); }

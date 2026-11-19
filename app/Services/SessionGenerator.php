@@ -185,6 +185,61 @@ class SessionGenerator
     }
 
     /**
+     * Propaga el instructor (y co-maestro) de un slot a sus sesiones FUTURAS ya
+     * generadas, para que el calendario y la asistencia coincidan con lo que dice
+     * la plantilla. Se usa al editar el instructor de un slot y en el comando de
+     * reconciliación.
+     *
+     * Sólo toca sesiones status='scheduled' + is_modified=false + de hoy en
+     * adelante. Así NUNCA pisa:
+     *   - suplentes / asistencia ya registrada  → esas quedan status='held'
+     *   - clases movidas o editadas a mano       → is_modified=true
+     *   - clases canceladas / pasadas            → status!='scheduled'
+     *
+     * @return int  sesiones actualizadas (o que cambiarían, si $dryRun)
+     */
+    public function syncInstructorToFutureSessions(ScheduleSlot $slot, ?Carbon $from = null, bool $dryRun = false): int
+    {
+        $from   = ($from ?? Carbon::now()->startOfDay())->copy()->startOfDay();
+        $slotI  = $slot->instructor_id   !== null ? (int) $slot->instructor_id   : null;
+        $slotI2 = $slot->instructor_id_2 !== null ? (int) $slot->instructor_id_2 : null;
+
+        $sessions = ClassSession::where('schedule_slot_id', $slot->id)
+            ->where('starts_at', '>=', $from)
+            ->where('status', 'scheduled')
+            ->where('is_modified', false)
+            ->get();
+
+        $changed = 0;
+        foreach ($sessions as $s) {
+            $sched = $s->scheduled_instructor_id !== null ? (int) $s->scheduled_instructor_id : null;
+            $act   = $s->actual_instructor_id    !== null ? (int) $s->actual_instructor_id    : null;
+            $i2    = $s->instructor_id_2          !== null ? (int) $s->instructor_id_2         : null;
+
+            $update = [];
+            if ($sched !== $slotI) {
+                $update['scheduled_instructor_id'] = $slotI;
+                // El "real" sólo se mueve si no hay suplente (real == programado).
+                if ($act === $sched) {
+                    $update['actual_instructor_id'] = $slotI;
+                }
+            }
+            if ($i2 !== $slotI2) {
+                $update['instructor_id_2'] = $slotI2;
+            }
+
+            if ($update) {
+                $changed++;
+                if (! $dryRun) {
+                    $s->update($update);
+                }
+            }
+        }
+
+        return $changed;
+    }
+
+    /**
      * Crea la sesión de $slot en la fecha $day si no existe ya. Devuelve los
      * contadores actualizados. NO abre transacción (la abre quien llama).
      *

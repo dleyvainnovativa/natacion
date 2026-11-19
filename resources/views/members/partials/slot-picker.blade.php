@@ -67,6 +67,9 @@
                             <span class="slot-day">{{ $weekdayShort[$slot->weekday] ?? '' }}</span>
                             <span class="slot-time mono">{{ $hhmm }}</span>
                             <span class="slot-sub">{{ $slot->lane?->label ?? 'Sin carril' }} · {{ $slot->instructor?->name ?? 'Sin instructor' }}</span>
+                            @if ($slot->effective_from && $slot->effective_from->isFuture())
+                                <span class="slot-future">desde {{ $slot->effective_from->format('d/m') }}</span>
+                            @endif
                             <span class="slot-count {{ $full ? 'is-full' : '' }}">{{ $slot->members_count }}/{{ $cap }}</span>
                         </label>
                     @endforeach

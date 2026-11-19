@@ -20,10 +20,13 @@ class MemberController extends Controller
     {
         $today = Carbon::now()->toDateString();
 
+        // Clases recurrentes activas cuya vigencia no haya terminado. Incluye las
+        // que empiezan a futuro (effective_from > hoy) para poder inscribir ya a
+        // un socio en una clase agendada para la próxima semana (antes el filtro
+        // effective_from <= hoy las escondía aunque ya salieran en el calendario).
         return ScheduleSlot::with(['program', 'lane', 'instructor', 'level'])
             ->withCount('members')
             ->where('active', true)
-            ->whereDate('effective_from', '<=', $today)
             ->where(fn ($q) => $q->whereNull('effective_to')
                 ->orWhereDate('effective_to', '>=', $today))
             ->orderBy('weekday')->orderBy('start_time')
@@ -106,9 +109,26 @@ class MemberController extends Controller
 
     public function show(Member $member)
     {
-        $member->load('membershipType', 'sessions.program');
+        $member->load([
+            'membershipType',
+            'sessions.program',
+            'slotAssignments.program',
+            'slotAssignments.lane',
+            'slotAssignments.level:id,name',
+        ]);
 
         return view('members.show', compact('member'));
+    }
+
+    /**
+     * Quita al socio de UNA clase recurrente (sin darlo de baja). Deja de aparecer
+     * en esa clase de hoy en adelante; el histórico se conserva.
+     */
+    public function unenroll(Member $member, ScheduleSlot $slot, EnrollmentService $enroller)
+    {
+        $enroller->unenrollSlot($member, $slot->id);
+
+        return back()->with('ok', 'Socio quitado de la clase (sigue activo, no se dio de baja).');
     }
 
     public function edit(Member $member)
