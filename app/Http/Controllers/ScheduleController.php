@@ -114,9 +114,18 @@ class ScheduleController extends Controller
         // la columna "sin carril").
         $hasUnassigned = $sessions->contains(fn($s) => $s->lane_id === null);
 
+        // Cierres (festivos / mantenimiento) de la semana, para sombrear igual
+        // que en la vista de día.
+        $weekBlackouts = \App\Models\Blackout::whereBetween('date',
+            [$weekStart->toDateString(), $weekStart->copy()->addDays(6)->toDateString()])->get();
+        $wholeDayDates = $weekBlackouts->whereNull('start_min')
+            ->map(fn ($b) => $b->date->toDateString())->unique()->values()->all();
+
         return view('schedule.index', [
             'weekStart'     => $weekStart,
             'byDay'         => $byDay,
+            'blackouts'     => $weekBlackouts,
+            'wholeDayDates' => $wholeDayDates,
             'lanes'         => $lanes,
             'hasUnassigned' => $hasUnassigned,
             'hasSessions'   => $sessions->isNotEmpty(),

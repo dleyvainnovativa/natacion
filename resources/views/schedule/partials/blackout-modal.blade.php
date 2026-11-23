@@ -1,4 +1,6 @@
-{{-- Modal para marcar un día festivo/inhábil o cierres por mantenimiento. --}}
+{{-- Modal para marcar un día festivo/inhábil o cierres por mantenimiento.
+     Se abre con data-bs-toggle (Bootstrap), sin depender de window.SF: app.js
+     reemplaza window.SF al cargar, así que colgar funciones ahí no es confiable. --}}
 <div class="modal fade" id="blackoutModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -36,8 +38,15 @@
 
                     <div id="bo-ranges" style="display:none">
                         <label class="form-label small mb-1">Horarios cerrados</label>
-                        <div id="bo-range-list"></div>
-                        <button type="button" class="btn btn-sm btn-soft" onclick="SF.addBlackoutRange()">
+                        <div id="bo-range-list">
+                            <div class="d-flex gap-2 align-items-center mb-2 bo-range-row">
+                                <input type="time" name="ranges[0][start]" class="form-control form-control-sm" style="width:auto">
+                                <span class="text-muted">a</span>
+                                <input type="time" name="ranges[0][end]" class="form-control form-control-sm" style="width:auto">
+                                <button type="button" class="btn btn-sm btn-outline-danger bo-range-del" aria-label="Quitar"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                        </div>
+                        <button type="button" id="bo-add-range" class="btn btn-sm btn-soft">
                             <i class="fa-solid fa-plus me-1"></i> Agregar horario
                         </button>
                     </div>
@@ -59,27 +68,26 @@
 
 <script>
 (function () {
-    let i = 0;
-    function rangeRow() {
-        const idx = i++;
-        const div = document.createElement('div');
-        div.className = 'd-flex gap-2 align-items-center mb-2';
+    var list = document.getElementById('bo-range-list');
+    var add  = document.getElementById('bo-add-range');
+    if (!list || !add) { return; }
+    var i = 1;
+    function wireDel(row) {
+        var b = row.querySelector('.bo-range-del');
+        if (b) { b.addEventListener('click', function () { row.remove(); }); }
+    }
+    Array.prototype.forEach.call(list.querySelectorAll('.bo-range-row'), wireDel);
+    add.addEventListener('click', function () {
+        var idx = i++;
+        var div = document.createElement('div');
+        div.className = 'd-flex gap-2 align-items-center mb-2 bo-range-row';
         div.innerHTML =
             '<input type="time" name="ranges[' + idx + '][start]" class="form-control form-control-sm" style="width:auto">' +
             '<span class="text-muted">a</span>' +
             '<input type="time" name="ranges[' + idx + '][end]" class="form-control form-control-sm" style="width:auto">' +
-            '<button type="button" class="btn btn-sm btn-outline-danger" aria-label="Quitar"><i class="fa-solid fa-xmark"></i></button>';
-        div.querySelector('button').addEventListener('click', () => div.remove());
-        return div;
-    }
-    window.SF = window.SF || {};
-    window.SF.addBlackoutRange = function () {
-        document.getElementById('bo-range-list').appendChild(rangeRow());
-    };
-    window.SF.openBlackoutModal = function () {
-        const list = document.getElementById('bo-range-list');
-        if (list && !list.children.length) { list.appendChild(rangeRow()); }
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('blackoutModal')).show();
-    };
+            '<button type="button" class="btn btn-sm btn-outline-danger bo-range-del" aria-label="Quitar"><i class="fa-solid fa-xmark"></i></button>';
+        list.appendChild(div);
+        wireDel(div);
+    });
 })();
 </script>

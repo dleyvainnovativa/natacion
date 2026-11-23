@@ -200,9 +200,37 @@ class SessionGenerator
      */
     public function syncInstructorToFutureSessions(ScheduleSlot $slot, ?Carbon $from = null, bool $dryRun = false): int
     {
-        $from   = ($from ?? Carbon::now()->startOfDay())->copy()->startOfDay();
-        $slotI  = $slot->instructor_id   !== null ? (int) $slot->instructor_id   : null;
-        $slotI2 = $slot->instructor_id_2 !== null ? (int) $slot->instructor_id_2 : null;
+        // Compatibilidad: ahora delega en la sincronización completa (hora +
+        // instructor). Mantiene el nombre por si algo externo lo llama.
+        return $this->syncSlotToFutureSessions($slot, $from, $dryRun);
+    }
+
+    /**
+     * Propaga los atributos de un slot a sus sesiones FUTURAS ya generadas, para
+     * que el calendario y la asistencia coincidan con lo que dice la plantilla.
+     * Sincroniza: HORA (conservando la fecha), duración, instructor y co-maestro.
+     * Se usa al editar un slot y en `schedule:fix-sessions`.
+     *
+     * Sólo toca sesiones status='scheduled' + is_modified=false + de hoy en
+     * adelante. Así NUNCA pisa:
+     *   - suplentes / asistencia ya registrada  → esas quedan status='held'
+     *   - clases movidas o editadas a mano       → is_modified=true
+     *   - clases canceladas / pasadas            → status!='scheduled'
+     *
+     * NO se propaga el CARRIL: las sesiones manejan el carril por su cuenta (se
+     * reparten/rotan entre carriles) y forzarlo al del slot movería clases que
+     * nadie pidió mover. Tampoco programa/nivel (cambiarlos a media serie
+     * afectaría rosters/entitlements; para eso conviene recrear la clase).
+     *
+     * @return int  sesiones actualizadas (o que cambiarían, si $dryRun)
+     */
+    public function syncSlotToFutureSessions(ScheduleSlot $slot, ?Carbon $from = null, bool $dryRun = false): int
+    {
+        $from     = ($from ?? Carbon::now()->startOfDay())->copy()->startOfDay();
+        $slotI    = $slot->instructor_id   !== null ? (int) $slot->instructor_id   : null;
+        $slotI2   = $slot->instructor_id_2 !== null ? (int) $slot->instructor_id_2 : null;
+        $slotTime = substr((string) $slot->start_time, 0, 5); // HH:MM
+        $slotDur  = (int) $slot->duration_min;
 
         $sessions = ClassSession::where('schedule_slot_id', $slot->id)
             ->where('starts_at', '>=', $from)
@@ -212,14 +240,24 @@ class SessionGenerator
 
         $changed = 0;
         foreach ($sessions as $s) {
+            $update = [];
+
+            // Hora: conservar la FECHA de la sesión, poner la HORA del slot.
+            $wantStart = $s->starts_at->copy()->setTimeFromTimeString($slotTime);
+            if (! $s->starts_at->equalTo($wantStart)) {
+                $update['starts_at'] = $wantStart;
+            }
+            if ((int) $s->duration_min !== $slotDur) {
+                $update['duration_min'] = $slotDur;
+            }
+
+            // Instructor: el programado sigue al slot; el "real" sólo si no hay
+            // suplente (real == programado).
             $sched = $s->scheduled_instructor_id !== null ? (int) $s->scheduled_instructor_id : null;
             $act   = $s->actual_instructor_id    !== null ? (int) $s->actual_instructor_id    : null;
             $i2    = $s->instructor_id_2          !== null ? (int) $s->instructor_id_2         : null;
-
-            $update = [];
             if ($sched !== $slotI) {
                 $update['scheduled_instructor_id'] = $slotI;
-                // El "real" sólo se mueve si no hay suplente (real == programado).
                 if ($act === $sched) {
                     $update['actual_instructor_id'] = $slotI;
                 }

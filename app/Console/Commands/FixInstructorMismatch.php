@@ -7,15 +7,14 @@ use App\Services\SessionGenerator;
 use Illuminate\Console\Command;
 
 /**
- * Alinea el instructor de las sesiones FUTURAS con el de su plantilla (slot).
+ * Alinea las sesiones FUTURAS con su plantilla (slot): HORA, duración, carril e
+ * instructor. Arregla el desfase histórico — p. ej. clases que quedaron a las
+ * 00:30 cuando la plantilla dice 12:30, o con el instructor viejo. De aquí en
+ * adelante la propagación es automática al editar; este comando limpia lo ya
+ * generado.
  *
- * Arregla el desfase histórico: al editar el instructor de un slot, las sesiones
- * ya generadas se quedaban con el instructor viejo (el calendario y la asistencia
- * mostraban a alguien que la plantilla ya había quitado). De aquí en adelante la
- * propagación es automática al editar; este comando limpia lo ya generado.
- *
- *   php artisan schedule:fix-instructors --dry-run   (reporta, no escribe)
- *   php artisan schedule:fix-instructors             (aplica)
+ *   php artisan schedule:fix-sessions --dry-run   (reporta, no escribe)
+ *   php artisan schedule:fix-sessions             (aplica)
  *
  * Sólo toca sesiones status='scheduled' + is_modified=false + de hoy en adelante,
  * así que NUNCA pisa suplentes/asistencia ('held'), clases movidas a mano, ni el
@@ -23,9 +22,9 @@ use Illuminate\Console\Command;
  */
 class FixInstructorMismatch extends Command
 {
-    protected $signature = 'schedule:fix-instructors {--dry-run : Solo reporta, no escribe}';
+    protected $signature = 'schedule:fix-sessions {--dry-run : Solo reporta, no escribe}';
 
-    protected $description = 'Alinea el instructor de las sesiones futuras con su plantilla (respeta suplentes, clases movidas e histórico).';
+    protected $description = 'Alinea las sesiones futuras con su plantilla (hora, carril, duración e instructor); respeta suplentes, clases movidas e histórico.';
 
     public function handle(SessionGenerator $generator): int
     {
@@ -37,7 +36,7 @@ class FixInstructorMismatch extends Command
         $totalSlots    = 0;
 
         foreach ($slots as $slot) {
-            $n = $generator->syncInstructorToFutureSessions($slot, null, $dry);
+            $n = $generator->syncSlotToFutureSessions($slot, null, $dry);
             if ($n > 0) {
                 $totalSessions += $n;
                 $totalSlots++;

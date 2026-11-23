@@ -128,12 +128,14 @@
                 <div class="cal-corner"></div>
                 @foreach ($weekdays as $iso => $label)
                     @php $dayDate = $weekStart->copy()->addDays($iso - 1); $startCol = 2 + $loop->index * $L; @endphp
-                    <a class="cal-dayhead {{ $dayDate->isToday() ? 'is-today' : '' }}"
+                    @php $isWholeDayOff = in_array($dayDate->toDateString(), $wholeDayDates, true); @endphp
+                    <a class="cal-dayhead {{ $dayDate->isToday() ? 'is-today' : '' }} {{ $isWholeDayOff ? 'is-dayoff' : '' }}"
                        style="grid-column: {{ $startCol }} / span {{ $L }};"
                        href="{{ route('schedule.day', array_merge($filters, ['date' => $dayDate->toDateString()])) }}"
-                       title="Ver el día en detalle">
+                       title="{{ $isWholeDayOff ? 'Día festivo / inhábil' : 'Ver el día en detalle' }}">
                         <span class="cd-day">{{ $label }}</span>
                         <span class="cd-date">{{ $dayDate->format('d/m') }}</span>
+                        @if ($isWholeDayOff)<span class="cd-off"><i class="fa-solid fa-ban"></i> Festivo</span>@endif
                     </a>
                     @foreach ($renderLanes as $j => $rl)
                         <div class="cal-lanehead {{ $j === $L - 1 ? 'cal-daysep' : '' }}"
@@ -163,7 +165,7 @@
                                 <div class="dc-grid-line" style="top: {{ ($m - $startMin) * $pxPerMin }}px"></div>
                             @endfor
                             @foreach (($byDay[$iso][$rl['id']] ?? []) as $s)
-                                @include('schedule.partials.cal-event', ['s' => $s, 'pxPerMin' => $pxPerMin, 'startMin' => $startMin])
+                                @include('schedule.partials.cal-event', ['s' => $s, 'pxPerMin' => $pxPerMin, 'startMin' => $startMin, 'blacked' => \App\Models\Blackout::covers($s, $blackouts)])
                             @endforeach
                         </div>
                     @endforeach

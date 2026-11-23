@@ -43,7 +43,8 @@
             </form>
             {{-- Marcar día festivo / inhábil o cierre por mantenimiento --}}
             @can('move-classes')
-                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="SF.openBlackoutModal()">
+                <button type="button" class="btn btn-outline-secondary btn-sm"
+                        data-bs-toggle="modal" data-bs-target="#blackoutModal">
                     <i class="fa-solid fa-ban me-1"></i> Festivo / inhábil
                 </button>
             @endcan

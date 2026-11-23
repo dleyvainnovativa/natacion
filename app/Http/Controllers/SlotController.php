@@ -66,10 +66,11 @@ class SlotController extends Controller
         // instructor actual; la deduplicación por slot+fecha evita duplicar).
         $generator->generateForSlotForward($slot);
 
-        // Propagar el instructor a las sesiones FUTURAS ya generadas, para que el
-        // calendario y la asistencia coincidan con la plantilla. Respeta suplentes
-        // (status 'held') y clases movidas a mano (is_modified).
-        $synced = $generator->syncInstructorToFutureSessions($slot);
+        // Propagar hora, duración e instructor a las sesiones FUTURAS ya generadas,
+        // para que el calendario y la asistencia coincidan con la plantilla.
+        // Respeta suplentes (status 'held') y clases movidas a mano (is_modified).
+        // El carril NO se propaga (las sesiones lo reparten por su cuenta).
+        $synced = $generator->syncSlotToFutureSessions($slot);
 
         // El modal envía member_ids (precargado con el roster actual): sincroniza.
         if ($hasMembers) {
@@ -78,7 +79,7 @@ class SlotController extends Controller
 
         return redirect()->route('schedule.template')
             ->with('ok', $synced
-                ? "Clase actualizada. Se ajustó el instructor en {$synced} sesión(es) futura(s)."
+                ? "Clase actualizada. Se ajustaron {$synced} sesión(es) futura(s) para que coincidan."
                 : 'Clase actualizada.')
             ->with('warnings', $this->slotWarnings($slot, $detector));
     }

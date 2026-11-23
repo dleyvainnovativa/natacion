@@ -1374,3 +1374,7 @@ body.mp-dragging .dc-event { cursor: copy; }
     background: #6b7280; color: #fff; font-size: .58rem; font-weight: 700;
     border-radius: 4px; padding: 0 4px; letter-spacing: .02em;
 }
+
+/* Cabecera de día festivo en la vista de semana (misma idea que el día) */
+.cal-dayhead.is-dayoff { background: repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(192,57,43,.10) 6px, rgba(192,57,43,.10) 12px); }
+.cal-dayhead .cd-off { display:block; font-size:.6rem; font-weight:700; color:#c0392b; letter-spacing:.02em; }
