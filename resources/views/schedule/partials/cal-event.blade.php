@@ -31,7 +31,8 @@ if ($names->count() <= $maxLines) {
     $extra = $names->count() - $show->count();
     }
     @endphp
-    <div class="dc-event chip-{{ $color }} {{ $s->status === 'cancelled' ? 'is-cancelled' : '' }}"
+    @php $blacked = $blacked ?? false; @endphp
+    <div class="dc-event chip-{{ $color }} {{ $s->status === 'cancelled' ? 'is-cancelled' : '' }} {{ $blacked ? 'is-blacked' : '' }}"
         style="top: {{ $top }}px; height: {{ $h }}px"
         data-session-id="{{ $s->id }}"
         data-duration="{{ $dur }}"
@@ -40,6 +41,7 @@ if ($names->count() <= $maxLines) {
         data-instructor="{{ $s->scheduled_instructor_id }}"
         data-instructor2="{{ $s->instructor_id_2 }}"
         title="{{ $s->starts_at->format('H:i') }} · {{ $s->program?->name }} · {{ $s->actualInstructor?->name ?? '—' }} · {{ $count }} alumnos">
+        @if ($blacked)<span class="dc-ev-blacked-tag">No cuenta</span>@endif
         <div class="dc-ev-top">
             <span class="dc-event-time mono">{{ $s->starts_at->format('H:i') }}</span>
             <span class="dc-ev-count {{ $full ? 'is-full' : '' }}">{{ $count }}@if ($cap)/{{ $cap }}@endif</span>

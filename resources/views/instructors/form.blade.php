@@ -34,6 +34,16 @@
             <small class="text-muted">Se usa para el reporte de nómina.</small>
         </div>
 
+        <div class="mb-3">
+            <label class="form-label small">Precio por evaluación</label>
+            <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" step="0.01" min="0" name="evaluation_price" class="form-control mono"
+                       value="{{ old('evaluation_price', $instructor->evaluation_price) }}">
+            </div>
+            <small class="text-muted">Se multiplica por las evaluaciones que registre en asistencia.</small>
+        </div>
+
         <div class="form-check mb-4">
             <input class="form-check-input" type="checkbox" name="active" id="active" value="1"
                    @checked(old('active', $instructor->active ?? true))>

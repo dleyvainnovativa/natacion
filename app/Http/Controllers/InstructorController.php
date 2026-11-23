@@ -27,7 +27,7 @@ class InstructorController extends Controller
         $this->authorize('manage-instructors');
 
         return view('instructors.form', [
-            'instructor' => new Instructor(['active' => true, 'pay_per_class' => 0]),
+            'instructor' => new Instructor(['active' => true, 'pay_per_class' => 0, 'evaluation_price' => 0]),
         ]);
     }
 
@@ -68,10 +68,12 @@ class InstructorController extends Controller
     private function validated(Request $request): array
     {
         $data = $request->validate([
-            'name'          => ['required', 'string', 'max:120'],
-            'pay_per_class' => ['nullable', 'numeric', 'min:0'],
+            'name'             => ['required', 'string', 'max:120'],
+            'pay_per_class'    => ['nullable', 'numeric', 'min:0'],
+            'evaluation_price' => ['nullable', 'numeric', 'min:0'],
         ]);
-        $data['pay_per_class'] = $data['pay_per_class'] ?? 0;
+        $data['pay_per_class']    = $data['pay_per_class'] ?? 0;
+        $data['evaluation_price'] = $data['evaluation_price'] ?? 0;
         $data['active'] = $request->boolean('active');
 
         return $data;

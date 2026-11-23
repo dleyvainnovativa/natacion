@@ -12,12 +12,14 @@ class ClassSession extends Model
         'schedule_slot_id', 'program_id', 'level_id', 'lane_id',
         'scheduled_instructor_id', 'actual_instructor_id', 'instructor_id_2',
         'starts_at', 'duration_min', 'status', 'is_modified', 'notes',
+        'evaluations_count',
     ];
 
     protected $casts = [
-        'starts_at'    => 'datetime',
-        'is_modified'  => 'boolean',
-        'duration_min' => 'integer',
+        'starts_at'         => 'datetime',
+        'is_modified'       => 'boolean',
+        'duration_min'      => 'integer',
+        'evaluations_count' => 'integer',
     ];
 
     public function slot()                { return $this->belongsTo(ScheduleSlot::class, 'schedule_slot_id'); }

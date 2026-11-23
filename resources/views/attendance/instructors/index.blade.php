@@ -22,6 +22,18 @@
         para el pago del suplente.
     </p>
 
+    @php $wholeDayBlackout = $blackouts->firstWhere('start_min', null); @endphp
+    @if ($blackouts->isNotEmpty())
+        <div class="alert alert-secondary py-2">
+            <i class="fa-solid fa-ban me-1"></i>
+            @if ($wholeDayBlackout)
+                Día {{ strtolower($wholeDayBlackout->label()) }}: las clases de este día no cuentan para el pago.
+            @else
+                Hay horarios cerrados este día (mantenimiento/festivo): esas clases no cuentan para el pago.
+            @endif
+        </div>
+    @endif
+
     <div class="app-card">
         <div class="table-responsive">
             <table class="table align-middle mb-0">
@@ -33,13 +45,17 @@
                         <th>Estado</th>
                         <th>Suplente</th>
                         <th>Impartió</th>
+                        <th class="text-center">Evaluaciones</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($sessions as $session)
-                        @php $att = $session->instructorAttendance; @endphp
-                        <tr data-session="{{ $session->id }}">
+                        @php
+                            $att = $session->instructorAttendance;
+                            $blk = \App\Models\Blackout::covers($session, $blackouts);
+                        @endphp
+                        <tr data-session="{{ $session->id }}" class="{{ $blk ? 'opacity-50' : '' }}">
                             <td class="ps-3 mono">{{ $session->starts_at->format('H:i') }}</td>
                             <td class="small">
                                 {{ $session->program?->name }}
@@ -78,16 +94,25 @@
                             <td class="small att-actual">
                                 {{ $session->actualInstructor?->name ?? '—' }}
                             </td>
+                            <td class="text-center">
+                                <input type="number" min="0" max="99" value="{{ $session->evaluations_count ?? 0 }}"
+                                       class="form-control form-control-sm mono att-evals text-center"
+                                       style="width:70px;margin:0 auto" title="Evaluaciones en esta clase">
+                            </td>
                             <td class="text-end pe-3">
-                                <button class="btn btn-sm btn-brand"
-                                        onclick="SF.saveInstructorAttendance(this)">
-                                    Guardar
-                                </button>
+                                @if ($blk)
+                                    <span class="badge bg-secondary" title="Festivo / mantenimiento: no cuenta">No cuenta</span>
+                                @else
+                                    <button class="btn btn-sm btn-brand"
+                                            onclick="SF.saveInstructorAttendance(this)">
+                                        Guardar
+                                    </button>
+                                @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-5">
+                            <td colspan="8" class="text-center text-muted py-5">
                                 No hay clases con instructor asignado este día.
                             </td>
                         </tr>

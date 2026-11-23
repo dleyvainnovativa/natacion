@@ -189,6 +189,8 @@ class ScheduleController extends Controller
             'sessionsPayload' => $this->sessionsPayload($sessions),
             'panelMembers' => $this->panelMembers($date->copy()->startOfWeek(Carbon::MONDAY)),
             'programLevels' => $this->programLevelsPayload(),
+            'blackouts'   => \App\Models\Blackout::whereDate('date', $date->toDateString())
+                ->orderByRaw('start_min IS NULL DESC')->orderBy('start_min')->get(),
         ]);
     }
 

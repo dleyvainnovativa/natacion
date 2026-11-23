@@ -215,11 +215,13 @@ async function saveInstructorAttendance(btn) {
     const sessionId = row.dataset.session;
     const status = row.querySelector('.att-status').value;
     const substitute = row.querySelector('.att-sub').value || null;
+    const evalsEl = row.querySelector('.att-evals');
 
     // Regla de UI: si es "puntual" no tiene sentido un suplente.
     const payload = {
         status,
         substitute_id: status === 'on_time' ? null : substitute,
+        evaluations: evalsEl ? (parseInt(evalsEl.value, 10) || 0) : 0,
     };
 
     SF.setLoading(btn, true);

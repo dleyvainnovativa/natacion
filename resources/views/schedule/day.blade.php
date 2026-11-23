@@ -41,6 +41,12 @@
                        onchange="document.getElementById('dayDateForm').submit()"
                        title="Ir a una fecha">
             </form>
+            {{-- Marcar día festivo / inhábil o cierre por mantenimiento --}}
+            @can('move-classes')
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="SF.openBlackoutModal()">
+                    <i class="fa-solid fa-ban me-1"></i> Festivo / inhábil
+                </button>
+            @endcan
             {{-- Editar la plantilla del mes de este día --}}
             @can('move-classes')
                 <a href="{{ route('schedule.template', ['month' => $date->format('Y-m')]) }}"
@@ -53,6 +59,42 @@
 
     @if (session('ok'))
         <div class="alert alert-success py-2">{{ session('ok') }}</div>
+    @endif
+
+    @php
+        $wholeDayBlackout = $blackouts->firstWhere('start_min', null);
+        $blackedIds = [];
+        foreach ($byLane as $laneSessions) {
+            foreach ($laneSessions as $bs) {
+                if (\App\Models\Blackout::covers($bs, $blackouts)) { $blackedIds[$bs->id] = true; }
+            }
+        }
+    @endphp
+
+    @if ($blackouts->isNotEmpty())
+        <div class="app-card p-3 mb-3 blackout-banner {{ $wholeDayBlackout ? 'is-whole' : '' }}">
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <strong class="me-1">
+                    <i class="fa-solid fa-ban me-1"></i>
+                    @if ($wholeDayBlackout)
+                        Día {{ strtolower($wholeDayBlackout->label()) }} — no cuenta para clases ni pagos
+                    @else
+                        Cierres parciales este día — esas horas no cuentan para pagos
+                    @endif
+                </strong>
+                @foreach ($blackouts as $b)
+                    <span class="badge-blackout">
+                        {{ $b->label() }}: {{ $b->rangeLabel() }}@if ($b->reason) · {{ $b->reason }}@endif
+                        @can('move-classes')
+                            <form method="POST" action="{{ route('blackouts.destroy', $b) }}" class="d-inline">
+                                @csrf @method('DELETE')
+                                <button class="btn-blackout-x" title="Quitar"><i class="fa-solid fa-xmark"></i></button>
+                            </form>
+                        @endcan
+                    </span>
+                @endforeach
+            </div>
+        </div>
     @endif
 
     {{-- Filtros (instructor / programa) --}}
@@ -124,7 +166,7 @@
                         <div class="dc-grid-line" style="top: {{ ($m - $startMin) * $pxPerMin }}px"></div>
                     @endfor
                     @foreach (($byLane[$rl['id']] ?? []) as $s)
-                        @include('schedule.partials.cal-event', ['s' => $s, 'pxPerMin' => $pxPerMin, 'startMin' => $startMin])
+                        @include('schedule.partials.cal-event', ['s' => $s, 'pxPerMin' => $pxPerMin, 'startMin' => $startMin, 'blacked' => isset($blackedIds[$s->id])])
                     @endforeach
                 </div>
             @endforeach
@@ -153,5 +195,6 @@
             'programs' => $programs, 'instructors' => $instructors,
             'lanes' => $lanes, 'members' => $panelMembers,
         ])
+        @include('schedule.partials.blackout-modal', ['date' => $date])
     @endcan
 @endsection

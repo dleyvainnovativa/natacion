@@ -37,21 +37,34 @@ class PayrollReport
         $sessions = ClassSession::query()
             ->where('status', 'held')
             ->whereBetween('starts_at', [$from, $to])
-            ->get(['id', 'scheduled_instructor_id', 'actual_instructor_id', 'instructor_id_2']);
+            ->get(['id', 'scheduled_instructor_id', 'actual_instructor_id', 'instructor_id_2',
+                'evaluations_count', 'starts_at', 'duration_min']);
+
+        // Cierres (festivos / mantenimiento) del periodo: las sesiones que caen en
+        // un cierre NO cuentan para el pago.
+        $blackouts = \App\Models\Blackout::whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->get()->groupBy(fn ($b) => $b->date->toDateString());
 
         // Conteo por instructor. Cada clase impartida cuenta completa para quien
         // la dio (actual_instructor) Y para el co-maestro si lo hay: ambos cobran.
-        $tally = []; // id => ['taught'=>, 'substituted'=>, 'as_co'=>]
+        // Las evaluaciones de la clase se pagan al que la impartió (actual).
+        $tally = []; // id => ['taught'=>, 'substituted'=>, 'as_co'=>, 'evals'=>]
         foreach ($sessions as $s) {
+            $dayBlk = $blackouts->get($s->starts_at->toDateString());
+            if ($dayBlk && \App\Models\Blackout::covers($s, $dayBlk)) {
+                continue; // día/horario inhábil: no se paga
+            }
+
             if ($primary = $s->actual_instructor_id) {
-                $tally[$primary] ??= ['taught' => 0, 'substituted' => 0, 'as_co' => 0];
+                $tally[$primary] ??= ['taught' => 0, 'substituted' => 0, 'as_co' => 0, 'evals' => 0];
                 $tally[$primary]['taught']++;
+                $tally[$primary]['evals'] += (int) $s->evaluations_count;
                 if ($s->scheduled_instructor_id !== $s->actual_instructor_id) {
                     $tally[$primary]['substituted']++;
                 }
             }
             if ($co = $s->instructor_id_2) {
-                $tally[$co] ??= ['taught' => 0, 'substituted' => 0, 'as_co' => 0];
+                $tally[$co] ??= ['taught' => 0, 'substituted' => 0, 'as_co' => 0, 'evals' => 0];
                 $tally[$co]['taught']++;
                 $tally[$co]['as_co']++;
             }
@@ -65,16 +78,23 @@ class PayrollReport
                 return null;
             }
 
-            $rate = (float) $instructor->pay_per_class;
+            $rate     = (float) $instructor->pay_per_class;
+            $evalRate = (float) $instructor->evaluation_price;
+            $evals    = $t['evals'];
+            $evalPay  = $evals * $evalRate;
 
             return [
-                'instructor'     => $instructor,
-                'classes_taught' => $t['taught'],
-                'substituted_in' => $t['substituted'],
-                'as_co'          => $t['as_co'],
-                'own_classes'    => $t['taught'] - $t['substituted'] - $t['as_co'],
-                'pay_per_class'  => $rate,
-                'total'          => $t['taught'] * $rate,
+                'instructor'      => $instructor,
+                'classes_taught'  => $t['taught'],
+                'substituted_in'  => $t['substituted'],
+                'as_co'           => $t['as_co'],
+                'own_classes'     => $t['taught'] - $t['substituted'] - $t['as_co'],
+                'pay_per_class'   => $rate,
+                'class_pay'       => $t['taught'] * $rate,
+                'evaluations'     => $evals,
+                'evaluation_price'=> $evalRate,
+                'evaluation_pay'  => $evalPay,
+                'total'           => $t['taught'] * $rate + $evalPay,
             ];
         })
         ->filter()

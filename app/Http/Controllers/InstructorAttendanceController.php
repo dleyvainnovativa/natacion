@@ -54,6 +54,7 @@ class InstructorAttendanceController extends Controller
             'prevDate'    => $date->copy()->subDay()->toDateString(),
             'nextDate'    => $date->copy()->addDay()->toDateString(),
             'instructors' => Instructor::where('active', true)->orderBy('name')->get(),
+            'blackouts'   => \App\Models\Blackout::whereDate('date', $date->toDateString())->get(),
         ]);
     }
 
@@ -69,6 +70,7 @@ class InstructorAttendanceController extends Controller
         $data = $request->validate([
             'status'        => ['required', 'in:on_time,late,absent'],
             'substitute_id' => ['nullable', 'exists:instructors,id'],
+            'evaluations'   => ['nullable', 'integer', 'min:0', 'max:99'],
         ]);
 
         // El suplente no puede ser el mismo instructor programado.
@@ -82,6 +84,11 @@ class InstructorAttendanceController extends Controller
             $data['substitute_id'] ?? null,
             $request->user()->id
         );
+
+        // Evaluaciones de la clase (se pagan al instructor que impartió).
+        if (array_key_exists('evaluations', $data)) {
+            $session->update(['evaluations_count' => $data['evaluations'] ?? 0]);
+        }
 
         return response()->json([
             'ok'       => true,

@@ -24,6 +24,7 @@
                     <tr class="small text-muted">
                         <th class="ps-3">Nombre</th>
                         <th class="text-end">Pago / clase</th>
+                        <th class="text-end">Precio eval.</th>
                         <th class="text-center">Clases en plantilla</th>
                         <th>Estado</th>
                         <th></th>
@@ -34,6 +35,7 @@
                         <tr class="{{ $i->active ? '' : 'opacity-50' }}">
                             <td class="ps-3 fw-500">{{ $i->name }}</td>
                             <td class="text-end mono">{{ $i->pay_per_class ? '$' . number_format($i->pay_per_class, 2) : '—' }}</td>
+                            <td class="text-end mono">{{ $i->evaluation_price ? '$' . number_format($i->evaluation_price, 2) : '—' }}</td>
                             <td class="text-center">{{ $i->slots_count }}</td>
                             <td>
                                 <span class="badge-role">{{ $i->active ? 'Activo' : 'Inactivo' }}</span>
@@ -53,7 +55,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="text-center text-muted py-5">Aún no hay maestros. Agrega el primero.</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted py-5">Aún no hay maestros. Agrega el primero.</td></tr>
                     @endforelse
                 </tbody>
             </table>

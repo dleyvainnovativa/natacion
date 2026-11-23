@@ -6,8 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class Instructor extends Model
 {
-    protected $fillable = ['user_id', 'name', 'pay_per_class', 'active'];
-    protected $casts = ['pay_per_class' => 'decimal:2', 'active' => 'boolean'];
+    protected $fillable = ['user_id', 'name', 'pay_per_class', 'evaluation_price', 'active'];
+    protected $casts = [
+        'pay_per_class'    => 'decimal:2',
+        'evaluation_price' => 'decimal:2',
+        'active'           => 'boolean',
+    ];
 
     public function user()             { return $this->belongsTo(User::class); }
     public function slots()            { return $this->hasMany(ScheduleSlot::class); }

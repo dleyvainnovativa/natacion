@@ -1342,3 +1342,35 @@ body.mp-dragging .dc-event { cursor: copy; }
     background: var(--surface-2); color: var(--text-muted, #8a97a6);
     border-radius: 4px; padding: 0 5px; margin-left: 4px;
 }
+
+/* ============================================================
+   #4 — Días festivos / inhábiles y cierres por mantenimiento
+   ============================================================ */
+.blackout-banner { border-left: 4px solid #9aa5b1; }
+.blackout-banner.is-whole { border-left-color: #c0392b; }
+
+.badge-blackout {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--surface-2); color: var(--text, #333);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 2px 8px; font-size: .78rem; font-weight: 600;
+}
+.btn-blackout-x {
+    border: 0; background: transparent; color: inherit;
+    cursor: pointer; padding: 0 0 0 2px; line-height: 1; opacity: .7;
+}
+.btn-blackout-x:hover { opacity: 1; }
+
+/* Clase dentro de un cierre: atenuada + rayada, con sello "No cuenta". */
+.dc-event.is-blacked {
+    opacity: .55;
+    background-image: repeating-linear-gradient(
+        135deg, transparent, transparent 7px,
+        rgba(120,120,120,.18) 7px, rgba(120,120,120,.18) 14px) !important;
+    filter: grayscale(.4);
+}
+.dc-ev-blacked-tag {
+    position: absolute; top: 2px; right: 2px; z-index: 2;
+    background: #6b7280; color: #fff; font-size: .58rem; font-weight: 700;
+    border-radius: 4px; padding: 0 4px; letter-spacing: .02em;
+}

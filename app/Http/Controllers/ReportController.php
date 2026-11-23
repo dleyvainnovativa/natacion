@@ -61,7 +61,8 @@ class ReportController extends Controller
 
         return response()->streamDownload(function () use ($rows) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Instructor', 'Clases impartidas', 'Como suplente', 'Propias', 'Pago por clase', 'Total']);
+            fputcsv($out, ['Instructor', 'Clases impartidas', 'Como suplente', 'Propias', 'Pago por clase',
+                'Pago clases', 'Evaluaciones', 'Precio evaluación', 'Pago evaluaciones', 'Total']);
             foreach ($rows as $r) {
                 fputcsv($out, [
                     $r['instructor']->name,
@@ -69,6 +70,10 @@ class ReportController extends Controller
                     $r['substituted_in'],
                     $r['own_classes'],
                     number_format($r['pay_per_class'], 2, '.', ''),
+                    number_format($r['class_pay'], 2, '.', ''),
+                    $r['evaluations'],
+                    number_format($r['evaluation_price'], 2, '.', ''),
+                    number_format($r['evaluation_pay'], 2, '.', ''),
                     number_format($r['total'], 2, '.', ''),
                 ]);
             }

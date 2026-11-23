@@ -48,6 +48,10 @@ Route::middleware('auth')->group(function () {
         // Alta rápida desde el calendario (clic en un hueco).
         Route::post('/horario/clase-rapida', [QuickClassController::class, 'store'])->name('schedule.quick-class.store');
 
+        // Días festivos / inhábiles y cierres por mantenimiento.
+        Route::post('/horario/festivos', [\App\Http\Controllers\BlackoutController::class, 'store'])->name('blackouts.store');
+        Route::delete('/horario/festivos/{blackout}', [\App\Http\Controllers\BlackoutController::class, 'destroy'])->name('blackouts.destroy');
+
         Route::post('/horario/slots', [SlotController::class, 'store'])->name('schedule.slots.store');
         Route::put('/horario/slots/{slot}', [SlotController::class, 'update'])->name('schedule.slots.update');
         Route::delete('/horario/slots/{slot}', [SlotController::class, 'destroy'])->name('schedule.slots.destroy');
